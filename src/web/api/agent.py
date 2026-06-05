@@ -1,37 +1,24 @@
 """Agent API"""
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
+from pydantic import BaseModel, Field
 from typing import Optional
 import uuid
 
 from src.analysis.service import AnalysisService
-from src.analysis.ai.factory import AIModelFactory
-from src.config import get_settings
+from src.web.deps import get_analysis_service
+from src.exceptions import AIProviderError
 from src.infra.logger import get_logger
 
 logger = get_logger("agent_api")
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
-# 分析服务实例（延迟初始化）
-_analysis_service: Optional[AnalysisService] = None
-
-
-def get_analysis_service() -> AnalysisService:
-    """获取分析服务"""
-    global _analysis_service
-    if _analysis_service is None:
-        config = get_settings()
-        ai_adapter = AIModelFactory.create(config)
-        _analysis_service = AnalysisService(ai_adapter)
-    return _analysis_service
-
 
 class ChatRequest(BaseModel):
     """聊天请求"""
-    session_id: Optional[str] = None
-    message: str
+    session_id: Optional[str] = Field(None, description="会话 ID")
+    message: str = Field(..., min_length=1, max_length=1000, description="消息内容")
 
 
 class ChatResponse(BaseModel):
@@ -41,12 +28,13 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def agent_chat(request: ChatRequest):
+async def agent_chat(
+    request: ChatRequest,
+    service: AnalysisService = Depends(get_analysis_service),
+):
     """Agent 对话"""
     try:
-        service = get_analysis_service()
         session_id = request.session_id or str(uuid.uuid4())
-
         response = await service.chat(session_id, request.message)
 
         return ChatResponse(
@@ -55,17 +43,17 @@ async def agent_chat(request: ChatRequest):
         )
     except Exception as e:
         logger.error(f"Agent 对话失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise AIProviderError(f"Agent 对话失败: {e}")
 
 
 @router.post("/analyze")
 async def agent_analyze(
-    symbol: str,
-    strategy: str = "comprehensive",
+    symbol: str = Query(..., min_length=1, max_length=10),
+    strategy: str = Query("comprehensive"),
+    service: AnalysisService = Depends(get_analysis_service),
 ):
     """Agent 分析"""
     try:
-        service = get_analysis_service()
         result = await service.analyze_stock(symbol, strategy)
 
         return {
@@ -77,18 +65,19 @@ async def agent_analyze(
         }
     except Exception as e:
         logger.error(f"Agent 分析失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise AIProviderError(f"Agent 分析失败: {e}")
 
 
 @router.websocket("/ws")
-async def agent_websocket(websocket: WebSocket):
+async def agent_websocket(
+    websocket: WebSocket,
+    service: AnalysisService = Depends(get_analysis_service),
+):
     """Agent WebSocket"""
     await websocket.accept()
     session_id = str(uuid.uuid4())
 
     try:
-        service = get_analysis_service()
-
         while True:
             # 接收消息
             data = await websocket.receive_json()

@@ -21,8 +21,8 @@ def valid_signal():
         source=SignalSource.MANUAL,
         status=SignalStatus.PUBLISHED,
         targets={
-            "600519.SSE": 0.3,
-            "000858.SZE": 0.2,
+            "600519.SSE": 0.08,
+            "000858.SZE": 0.07,
         },
     )
 

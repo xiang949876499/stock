@@ -9,6 +9,8 @@ from src.config import Settings, get_settings
 from src.infra.logger import setup_logger, get_logger
 from src.infra.scheduler import TaskScheduler
 from src.web.api.router import router as api_router
+from src.web.middleware.error_handler import stockhub_exception_handler, generic_exception_handler
+from src.exceptions import StockHubException
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -25,6 +27,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册异常处理器
+app.add_exception_handler(StockHubException, stockhub_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # 注册路由
 app.include_router(api_router)
@@ -103,7 +109,6 @@ def serve(host: str, port: int, reload: bool):
 def init():
     """初始化数据"""
     click.echo("初始化数据...")
-    # 创建数据目录
     import os
     os.makedirs("./data/catalog", exist_ok=True)
     os.makedirs("./data/daily/A", exist_ok=True)

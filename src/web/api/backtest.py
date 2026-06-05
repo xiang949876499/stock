@@ -1,9 +1,11 @@
 """回测 API"""
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 from typing import Optional
+import uuid
 
+from src.exceptions import ValidationError
 from src.infra.logger import get_logger
 
 logger = get_logger("backtest_api")
@@ -13,11 +15,11 @@ router = APIRouter(prefix="/backtest", tags=["backtest"])
 
 class BacktestRequest(BaseModel):
     """回测请求"""
-    symbols: list[str]
-    strategy: str
-    start_date: str
-    end_date: str
-    initial_capital: float = 1000000.0
+    symbols: list[str] = Field(..., min_length=1, max_length=100, description="股票代码列表")
+    strategy: str = Field(..., description="策略名称")
+    start_date: str = Field(..., pattern="^\d{4}-\d{2}-\d{2}$", description="开始日期")
+    end_date: str = Field(..., pattern="^\d{4}-\d{2}-\d{2}$", description="结束日期")
+    initial_capital: float = Field(1000000.0, gt=0, description="初始资金")
 
 
 class BacktestResponse(BaseModel):
@@ -32,7 +34,6 @@ async def run_backtest(request: BacktestRequest):
     """运行回测"""
     try:
         # TODO: 实现回测
-        import uuid
         backtest_id = str(uuid.uuid4())
 
         return BacktestResponse(
@@ -42,7 +43,7 @@ async def run_backtest(request: BacktestRequest):
         )
     except Exception as e:
         logger.error(f"运行回测失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise ValidationError(f"运行回测失败: {e}")
 
 
 @router.get("/results/{backtest_id}")

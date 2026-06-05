@@ -73,6 +73,9 @@ stock-hub = "src.main:cli"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pytest.PytestUnknownMarkWarning",
+]
 
 [tool.black]
 line-length = 100

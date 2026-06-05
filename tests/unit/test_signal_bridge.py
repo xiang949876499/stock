@@ -28,8 +28,8 @@ def published_signal():
         source=SignalSource.MANUAL,
         status=SignalStatus.PUBLISHED,
         targets={
-            "600519.SSE": 0.3,
-            "000858.SZE": 0.2,
+            "600519.SSE": 0.08,
+            "000858.SZE": 0.07,
         },
     )
 
@@ -68,12 +68,12 @@ async def test_process_draft_signal(signal_bridge, draft_signal):
 async def test_process_signal_with_positions(signal_bridge, published_signal):
     """测试带持仓的信号处理"""
     current_positions = {
-        "600519.SSE": 0.2,
-        "000858.SZE": 0.3,
+        "600519.SSE": 0.05,
+        "000858.SZE": 0.10,
     }
     orders = await signal_bridge.process_signal(published_signal, current_positions)
-    # 600519: 0.3 - 0.2 = 0.1 > 0.01, BUY
-    # 000858: 0.2 - 0.3 = -0.1 < -0.01, SELL
+    # 600519: 0.08 - 0.05 = 0.03 > 0.01, BUY
+    # 000858: 0.07 - 0.10 = -0.03 < -0.01, SELL
     assert len(orders) == 2
 
     buy_order = next(o for o in orders if o.vt_symbol == "600519.SSE")

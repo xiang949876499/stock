@@ -1,53 +1,42 @@
 """分析 API"""
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from src.analysis.service import AnalysisService
-from src.analysis.ai.factory import AIModelFactory
-from src.config import get_settings
+from src.web.deps import get_analysis_service
+from src.exceptions import AIProviderError, ValidationError
 from src.infra.logger import get_logger
 
 logger = get_logger("analysis_api")
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
-# 分析服务实例（延迟初始化）
-_analysis_service: Optional[AnalysisService] = None
-
-
-def get_analysis_service() -> AnalysisService:
-    """获取分析服务"""
-    global _analysis_service
-    if _analysis_service is None:
-        config = get_settings()
-        ai_adapter = AIModelFactory.create(config)
-        _analysis_service = AnalysisService(ai_adapter)
-    return _analysis_service
-
 
 class AnalysisRequest(BaseModel):
     """分析请求"""
-    symbol: str
-    market: str = "A"
-    strategy: str = "comprehensive"
+    symbol: str = Field(..., min_length=1, max_length=10, description="股票代码")
+    market: str = Field("A", pattern="^(A|HK|US)$", description="市场类型")
+    strategy: str = Field("comprehensive", description="分析策略")
 
 
 class AnalysisResponse(BaseModel):
     """分析响应"""
     symbol: str
-    score: float
-    signal: str
-    trend: str
+    score: float = Field(..., ge=0, le=100)
+    signal: str = Field(..., pattern="^(buy|sell|hold)$")
+    trend: str = Field(..., pattern="^(bullish|bearish|neutral)$")
     reason: str
 
 
 @router.post("/analyze", response_model=AnalysisResponse)
-async def analyze_stock(request: AnalysisRequest):
+async def analyze_stock(
+    request: AnalysisRequest,
+    service: AnalysisService = Depends(get_analysis_service),
+):
     """分析股票"""
     try:
-        service = get_analysis_service()
         result = await service.analyze_stock(request.symbol, request.strategy)
 
         return AnalysisResponse(
@@ -59,7 +48,7 @@ async def analyze_stock(request: AnalysisRequest):
         )
     except Exception as e:
         logger.error(f"分析股票失败: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise AIProviderError(f"分析股票失败: {e}")
 
 
 @router.get("/reports")
