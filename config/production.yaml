@@ -1,0 +1,11 @@
+# 生产环境配置
+debug: false
+
+# 数据目录
+data_dir: ./data/prod
+log_dir: ./logs/prod
+
+# 风控（生产环境更严格）
+max_position_ratio: 0.2
+max_daily_loss: 0.03
+max_drawdown: 0.08

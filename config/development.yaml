@@ -1,0 +1,6 @@
+# 开发环境配置
+debug: true
+
+# 数据目录
+data_dir: ./data/dev
+log_dir: ./logs/dev

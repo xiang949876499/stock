@@ -1,0 +1,23 @@
+# 默认配置
+app_name: Stock Hub
+app_version: 0.1.0
+debug: false
+
+# 数据目录
+data_dir: ./data
+log_dir: ./logs
+
+# AI 模型
+ai_provider: openai
+ai_model: gpt-4
+
+# 数据源
+data_provider: akshare
+
+# 执行
+gateway_type: sim
+
+# 风控
+max_position_ratio: 0.3
+max_daily_loss: 0.05
+max_drawdown: 0.1

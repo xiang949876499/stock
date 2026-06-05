@@ -1,0 +1,39 @@
+# 核心
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# 数据处理
+pandas>=2.1.0
+numpy>=1.26.0
+pyarrow>=14.0.0
+
+# 数据源
+akshare>=1.12.0
+
+# 技术指标
+pandas-ta>=0.3.14
+
+# 任务调度
+apscheduler>=3.10.0
+
+# 日志
+structlog>=24.1.0
+
+# 工具
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+click>=8.1.7
+aiohttp>=3.9.0
+beautifulsoup4>=4.12.0
+
+# AI 模型（可选）
+# openai>=1.12.0
+# anthropic>=0.18.0
+# google-generativeai>=0.3.0
+
+# qlib（可选）
+# pyqlib>=0.9.0
+# lightgbm>=4.2.0
+# xgboost>=2.0.0
