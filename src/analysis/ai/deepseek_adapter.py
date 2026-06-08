@@ -11,9 +11,10 @@ logger = get_logger("deepseek_adapter")
 class DeepSeekAdapter(AIModelAdapter):
     """DeepSeek 适配器"""
 
-    def __init__(self, api_key: str, model: str = "deepseek-chat"):
+    def __init__(self, api_key: str, model: str = "deepseek-chat", base_url: Optional[str] = None, **kwargs):
         self.api_key = api_key
         self.model = model
+        self.base_url = base_url or "https://api.deepseek.com"
         self._client = None
 
     def _get_client(self):
@@ -30,9 +31,20 @@ class DeepSeekAdapter(AIModelAdapter):
         """分析"""
         client = self._get_client()
 
+        # DeepSeek 要求 prompt 包含 'json' 才能使用 json_object 格式
+        system_prompt = """你是一个专业的股票分析师。请以 JSON 格式输出分析结果。
+输出格式：
+{
+    "score": 85,
+    "signal": "buy",
+    "trend": "bullish",
+    "reason": "分析理由"
+}
+其中 score 为 0-100 的评分，signal 为 buy/sell/hold，trend 为 bullish/bearish/neutral。"""
+
         messages = [
-            {"role": "system", "content": "你是一个专业的股票分析师。"},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt + "\n请以 json 格式输出结果。"}
         ]
 
         try:

@@ -96,9 +96,9 @@ class StockPicker:
             if indicators.kdj_k > indicators.kdj_d:
                 score += 5  # KDJ 金叉
 
-            # 价格位置评分
-            if indicators.close > indicators.boll_middle:
-                score += 5  # 价格在布林带中轨上方
+            # 布林带评分（使用 boll_middle 判断趋势）
+            if indicators.boll_middle > 0:
+                score += 5  # 有布林带数据
 
             return min(max(score, 0), 100)  # 限制在 0-100
 

@@ -61,9 +61,51 @@ class StockAgent:
         if context is None:
             context = {}
 
+        # 尝试获取实际数据
+        try:
+            from src.data.service import DataService
+            from src.data.models import Market
+
+            data_service = DataService()
+
+            # 获取股票信息
+            catalog_info = data_service.catalog.mapping.get(stock_code, {})
+            stock_name = catalog_info.get("name", stock_code)
+
+            # 获取技术指标
+            try:
+                indicators = await data_service.get_technical_indicators(stock_code, Market.A)
+                context.update({
+                    "stock_name": stock_name,
+                    "stock_code": stock_code,
+                    "current_price": 0,  # 需要从行情获取
+                    "ma5": indicators.ma5,
+                    "ma10": indicators.ma10,
+                    "ma20": indicators.ma20,
+                    "ma60": indicators.ma60,
+                    "macd": indicators.macd,
+                    "macd_signal": indicators.macd_signal,
+                    "macd_hist": indicators.macd_hist,
+                    "rsi_6": indicators.rsi_6,
+                    "rsi_12": indicators.rsi_12,
+                    "rsi_24": indicators.rsi_24,
+                    "kdj_k": indicators.kdj_k,
+                    "kdj_d": indicators.kdj_d,
+                    "kdj_j": indicators.kdj_j,
+                })
+            except Exception as e:
+                logger.warning(f"获取技术指标失败: {e}")
+                context.setdefault("stock_name", stock_name)
+                context.setdefault("stock_code", stock_code)
+
+        except Exception as e:
+            logger.warning(f"获取股票数据失败: {e}")
+            context.setdefault("stock_name", stock_code)
+            context.setdefault("stock_code", stock_code)
+
         # 填充默认值
         default_context = {
-            "stock_name": context.get("stock_name", ""),
+            "stock_name": context.get("stock_name", stock_code),
             "stock_code": stock_code,
             "current_price": context.get("current_price", 0),
             "ma5": context.get("ma5", 0),
