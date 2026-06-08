@@ -127,5 +127,115 @@ def sync(market: str, symbols: str):
     click.echo("数据同步完成")
 
 
+@cli.command()
+@click.option("--market", default="A", help="市场类型 (A/HK)")
+@click.option("--top", default=10, type=int, help="推荐数量")
+@click.option("--analyze", is_flag=True, help="是否进行 AI 分析")
+def recommend(market: str, top: int, analyze: bool):
+    """推荐股票"""
+    import asyncio
+
+    async def _recommend():
+        from src.analysis.strategies.stock_picker import get_stock_recommendations
+        from src.analysis.service import AnalysisService
+        from src.analysis.ai.factory import AIModelFactory
+        from src.config import get_settings
+
+        click.echo(f"正在推荐 {market} 市场 Top {top} 股票...")
+
+        # 获取推荐
+        recommendations = await get_stock_recommendations(market, top)
+
+        if not recommendations:
+            click.echo("没有找到推荐股票")
+            return
+
+        if analyze:
+            # AI 分析
+            config = get_settings()
+            ai_adapter = AIModelFactory.create(config)
+
+            if not ai_adapter:
+                click.echo("AI 未配置，仅显示技术评分")
+                for i, stock in enumerate(recommendations, 1):
+                    click.echo(f"{i}. {stock['symbol']} - {stock['name']} | 技术评分: {stock['score']:.1f}")
+                return
+
+            service = AnalysisService(ai_adapter)
+
+            click.echo("\n正在进行 AI 分析...\n")
+            click.echo(f"{'序号':<4} {'代码':<10} {'名称':<10} {'技术分':<8} {'AI分':<8} {'信号':<8} {'趋势':<8}")
+            click.echo("-" * 70)
+
+            for i, stock in enumerate(recommendations, 1):
+                try:
+                    analysis = await service.analyze_stock(stock["symbol"], "comprehensive")
+                    click.echo(
+                        f"{i:<4} {stock['symbol']:<10} {stock['name']:<10} "
+                        f"{stock['score']:<8.1f} {analysis.score:<8.1f} "
+                        f"{analysis.signal:<8} {analysis.trend:<8}"
+                    )
+                except Exception as e:
+                    click.echo(
+                        f"{i:<4} {stock['symbol']:<10} {stock['name']:<10} "
+                        f"{stock['score']:<8.1f} {'N/A':<8} {'N/A':<8} {'N/A':<8}"
+                    )
+        else:
+            # 仅显示技术评分
+            click.echo(f"\n{'序号':<4} {'代码':<10} {'名称':<10} {'技术评分':<10}")
+            click.echo("-" * 40)
+
+            for i, stock in enumerate(recommendations, 1):
+                click.echo(
+                    f"{i:<4} {stock['symbol']:<10} {stock['name']:<10} {stock['score']:<10.1f}"
+                )
+
+    asyncio.run(_recommend())
+
+
+@cli.command()
+@click.argument("symbol")
+@click.option("--market", default="A", help="市场类型 (A/HK)")
+@click.option("--strategy", default="comprehensive", help="分析策略")
+def evaluate(symbol: str, market: str, strategy: str):
+    """评估单只股票"""
+    import asyncio
+
+    async def _evaluate():
+        from src.analysis.service import AnalysisService
+        from src.analysis.ai.factory import AIModelFactory
+        from src.config import get_settings
+
+        click.echo(f"正在评估 {symbol}...")
+
+        config = get_settings()
+        ai_adapter = AIModelFactory.create(config)
+
+        if not ai_adapter:
+            click.echo("错误: AI 未配置，请在 .env 中设置 AI_API_KEY")
+            return
+
+        service = AnalysisService(ai_adapter)
+
+        try:
+            result = await service.analyze_stock(symbol, strategy)
+
+            click.echo(f"\n{'='*50}")
+            click.echo(f"股票: {symbol}")
+            click.echo(f"{'='*50}")
+            click.echo(f"评分: {result.score:.1f}/100")
+            click.echo(f"信号: {result.signal}")
+            click.echo(f"趋势: {result.trend}")
+            click.echo(f"{'='*50}")
+            click.echo(f"分析理由:")
+            click.echo(result.reason)
+            click.echo(f"{'='*50}")
+
+        except Exception as e:
+            click.echo(f"评估失败: {e}")
+
+    asyncio.run(_evaluate())
+
+
 if __name__ == "__main__":
     cli()

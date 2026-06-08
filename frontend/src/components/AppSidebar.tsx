@@ -7,6 +7,7 @@ import {
   BellOutlined,
   FundOutlined,
   FileTextOutlined,
+  StarOutlined,
   SettingOutlined,
 } from '@ant-design/icons'
 
@@ -22,6 +23,11 @@ const menuItems = [
     key: '/stocks',
     icon: <StockOutlined />,
     label: '股票列表',
+  },
+  {
+    key: '/recommend',
+    icon: <StarOutlined />,
+    label: '股票推荐',
   },
   {
     key: '/analysis',

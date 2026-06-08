@@ -6,6 +6,7 @@ import Analysis from './pages/Analysis'
 import Signals from './pages/Signals'
 import Portfolio from './pages/Portfolio'
 import News from './pages/News'
+import Recommend from './pages/Recommend'
 import Settings from './pages/Settings'
 import AppHeader from './components/AppHeader'
 import AppSidebar from './components/AppSidebar'
@@ -26,6 +27,7 @@ function App() {
             <Route path="/signals" element={<Signals />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/news" element={<News />} />
+            <Route path="/recommend" element={<Recommend />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Content>

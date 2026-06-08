@@ -17,8 +17,8 @@ class BacktestRequest(BaseModel):
     """回测请求"""
     symbols: list[str] = Field(..., min_length=1, max_length=100, description="股票代码列表")
     strategy: str = Field(..., description="策略名称")
-    start_date: str = Field(..., pattern="^\d{4}-\d{2}-\d{2}$", description="开始日期")
-    end_date: str = Field(..., pattern="^\d{4}-\d{2}-\d{2}$", description="结束日期")
+    start_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="开始日期")
+    end_date: str = Field(..., pattern=r"^\d{4}-\d{2}-\d{2}$", description="结束日期")
     initial_capital: float = Field(1000000.0, gt=0, description="初始资金")
 
 

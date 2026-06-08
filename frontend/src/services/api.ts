@@ -77,4 +77,16 @@ export const agentApi = {
     api.post<ChatResponse>('/agent/chat', request),
 }
 
+// 推荐相关
+export const recommendApi = {
+  stocks: (market: string = 'A', topN: number = 10) =>
+    api.get('/recommend/stocks', { params: { market, top_n: topN } }),
+
+  analyze: (market: string = 'A', topN: number = 5) =>
+    api.get('/recommend/stocks/analyze', { params: { market, top_n: topN } }),
+
+  evaluate: (symbol: string, market: string = 'A') =>
+    api.get(`/recommend/stocks/${symbol}/evaluate`, { params: { market } }),
+}
+
 export default api
