@@ -24,6 +24,9 @@ from .event import NewsStrategy, HotStrategy
 from .fundamental import GrowthStrategy, ValueStrategy
 from .trend import TrendStrategy, WaveStrategy, ChanStrategy
 
+# a-share-skill 策略
+from .ashare_skill_strategies import register_ashare_strategies
+
 
 # 策略注册表
 STRATEGIES = {
@@ -38,3 +41,6 @@ STRATEGIES = {
     "wave": WaveStrategy(),
     "chan": ChanStrategy(),
 }
+
+# 注册 a-share-skill 策略
+register_ashare_strategies(STRATEGIES)

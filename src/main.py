@@ -1,5 +1,14 @@
 """应用入口"""
 
+import os
+# 禁用代理访问国内数据源（必须在其他导入之前）
+os.environ['NO_PROXY'] = '*'
+os.environ['no_proxy'] = '*'
+os.environ.pop('HTTP_PROXY', None)
+os.environ.pop('HTTPS_PROXY', None)
+os.environ.pop('http_proxy', None)
+os.environ.pop('https_proxy', None)
+
 import click
 import uvicorn
 from fastapi import FastAPI
