@@ -23,7 +23,7 @@ const Recommend = () => {
   const [loading, setLoading] = useState(false)
   const [stocks, setStocks] = useState<RecommendStock[]>([])
   const [market, setMarket] = useState('A')
-  const [topN, setTopN] = useState(10)
+  const [topN, setTopN] = useState(5)
   const [withAnalysis, setWithAnalysis] = useState(false)
 
   const handleRecommend = async () => {
@@ -196,9 +196,9 @@ const Recommend = () => {
 
           <InputNumber
             value={topN}
-            onChange={(value) => setTopN(value || 10)}
+            onChange={(value) => setTopN(value || 5)}
             min={1}
-            max={50}
+            max={10}
             style={{ width: 120 }}
             placeholder="推荐数量"
           />
@@ -208,8 +208,8 @@ const Recommend = () => {
             onChange={setWithAnalysis}
             style={{ width: 180 }}
           >
-            <Option value={false}>仅技术评分</Option>
-            <Option value={true}>技术 + AI 分析</Option>
+            <Option value={false}>仅技术评分（快速）</Option>
+            <Option value={true}>技术 + AI 分析（较慢）</Option>
           </Select>
 
           <Button
@@ -220,6 +220,12 @@ const Recommend = () => {
           >
             开始推荐
           </Button>
+
+          {withAnalysis && (
+            <span style={{ color: '#999', fontSize: 12 }}>
+              ⚠️ AI 分析每只股票约需 15 秒，请耐心等待
+            </span>
+          )}
         </Space>
       </Card>
 
