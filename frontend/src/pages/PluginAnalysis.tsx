@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, Input, Typography, Alert, Descriptions, Tag, Table, Spin, Empty } from 'antd';
 import PluginSelector from '../components/PluginSelector';
 import ParameterForm from '../components/ParameterForm';
+import SlashCommand from '../components/SlashCommand';
 import { pluginApi } from '../services/api';
 
 const { Title, Text } = Typography;
@@ -82,6 +83,31 @@ const PluginAnalysis = () => {
         .finally(() => setLoading(false));
     },
     [selectedPlugin, symbol]
+  );
+
+  // 斜杠命令执行
+  const handleSlashCommand = useCallback(
+    (plugin: string, params: any) => {
+      setSelectedPlugin(plugin);
+      if (params.symbol) {
+        setSymbol(params.symbol);
+      }
+      setResult(null);
+      setError('');
+
+      setLoading(true);
+      pluginApi
+        .execute(plugin, { symbol: params.symbol || symbol, params })
+        .then((res) => {
+          setResult(res.data);
+        })
+        .catch((err) => {
+          console.error('执行分析失败:', err);
+          setError(err.response?.data?.detail || '执行分析失败');
+        })
+        .finally(() => setLoading(false));
+    },
+    [symbol]
   );
 
   // 渲染结果
@@ -174,6 +200,8 @@ const PluginAnalysis = () => {
           style={{ marginBottom: 16 }}
         />
       )}
+
+      <SlashCommand onExecute={handleSlashCommand} />
 
       <Card loading={pluginsLoading} style={{ marginBottom: 16 }}>
         <PluginSelector
