@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Card, Form, Input, Select, Button, Result, Descriptions, Tag } from 'antd'
+import { useState, useEffect } from 'react'
+import { Card, Form, Input, Select, Button, Descriptions, Tag, message, Space } from 'antd'
+import { useSearchParams } from 'react-router-dom'
 import { analysisApi } from '../services/api'
 import type { AnalysisResponse } from '../types'
 
@@ -7,19 +8,39 @@ const { Option } = Select
 
 const Analysis = () => {
   const [form] = Form.useForm()
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResponse | null>(null)
 
-  const onFinish = async (values: any) => {
+  useEffect(() => {
+    // 从 URL 参数获取股票代码
+    const symbol = searchParams.get('symbol')
+    if (symbol) {
+      form.setFieldsValue({ symbol })
+      // 自动触发分析
+      handleAnalyze(symbol, form.getFieldValue('market') || 'A', form.getFieldValue('strategy') || 'comprehensive')
+    }
+  }, [searchParams])
+
+  const handleAnalyze = async (symbol: string, market: string, strategy: string) => {
     setLoading(true)
     try {
-      const response = await analysisApi.analyze(values)
+      const response = await analysisApi.analyze({
+        symbol,
+        market,
+        strategy,
+      })
       setResult(response.data)
+      message.success('分析完成')
     } catch (error) {
-      console.error('分析失败:', error)
+      message.error('分析失败，请检查 AI 配置')
     } finally {
       setLoading(false)
     }
+  }
+
+  const onFinish = async (values: any) => {
+    await handleAnalyze(values.symbol, values.market, values.strategy)
   }
 
   return (
@@ -38,7 +59,7 @@ const Analysis = () => {
             label="股票代码"
             rules={[{ required: true, message: '请输入股票代码' }]}
           >
-            <Input placeholder="例如: 600519" />
+            <Input placeholder="例如: 600519" style={{ width: 150 }} />
           </Form.Item>
 
           <Form.Item name="market" label="市场">
@@ -55,13 +76,22 @@ const Analysis = () => {
               <Option value="macd">MACD</Option>
               <Option value="trend">趋势分析</Option>
               <Option value="news">新闻事件</Option>
+              <Option value="macd_trend_resonance">MACD趋势共振</Option>
+              <Option value="macd_second_golden_cross">MACD二次金叉</Option>
+              <Option value="tuige_shortline">退哥短线</Option>
+              <Option value="swing_defensive">摆动防御</Option>
             </Select>
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              分析
-            </Button>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                分析
+              </Button>
+              <Button onClick={() => { setResult(null); form.resetFields() }}>
+                清空
+              </Button>
+            </Space>
           </Form.Item>
         </Form>
       </Card>
