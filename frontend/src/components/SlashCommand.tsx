@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Input, List, Tag, Typography, Card } from 'antd';
-import { CommandOutlined } from '@ant-design/icons';
+import { CodeOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -67,7 +67,7 @@ const SlashCommand: React.FC<SlashCommandProps> = ({ onExecute }) => {
   return (
     <Card
       size="small"
-      title={<><CommandOutlined /> 快捷命令</>}
+      title={<><CodeOutlined /> 快捷命令</>}
       style={{ marginBottom: 16 }}
     >
       <div style={{ position: 'relative' }}>
