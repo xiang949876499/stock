@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { Layout } from 'antd'
 import Dashboard from './pages/Dashboard'
 import StockList from './pages/StockList'
+import StockDetail from './pages/StockDetail'
 import Analysis from './pages/Analysis'
 import Signals from './pages/Signals'
 import Portfolio from './pages/Portfolio'
@@ -23,6 +24,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/stocks" element={<StockList />} />
+            <Route path="/stocks/:symbol" element={<StockDetail />} />
             <Route path="/analysis" element={<Analysis />} />
             <Route path="/signals" element={<Signals />} />
             <Route path="/portfolio" element={<Portfolio />} />

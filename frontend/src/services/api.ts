@@ -27,6 +27,9 @@ export const stockApi = {
 
   getKline: (symbol: string, market: string, period: string = 'daily') =>
     api.get<StockDaily[]>(`/stocks/${symbol}/kline`, { params: { market, period } }),
+
+  getTechnical: (symbol: string, market: string) =>
+    api.get<TechnicalIndicators>(`/stocks/${symbol}/technical`, { params: { market } }),
 }
 
 // 分析相关
