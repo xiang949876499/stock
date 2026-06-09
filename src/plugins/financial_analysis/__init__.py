@@ -5,6 +5,7 @@ from .screening import StockScreeningPlugin
 from .lbo import LBOAnalysisPlugin
 from .ddm import DDMValuationPlugin
 from .merger import MergerAnalysisPlugin
+from .comprehensive_analysis import ComprehensiveAnalysisPlugin
 
 __all__ = [
     "DCFValuationPlugin",
@@ -13,4 +14,5 @@ __all__ = [
     "LBOAnalysisPlugin",
     "DDMValuationPlugin",
     "MergerAnalysisPlugin",
+    "ComprehensiveAnalysisPlugin",
 ]
