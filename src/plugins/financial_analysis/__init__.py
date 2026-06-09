@@ -2,5 +2,13 @@
 from .dcf import DCFValuationPlugin
 from .comps import ComparableAnalysisPlugin
 from .screening import StockScreeningPlugin
+from .lbo import LBOAnalysisPlugin
+from .ddm import DDMValuationPlugin
 
-__all__ = ["DCFValuationPlugin", "ComparableAnalysisPlugin", "StockScreeningPlugin"]
+__all__ = [
+    "DCFValuationPlugin",
+    "ComparableAnalysisPlugin",
+    "StockScreeningPlugin",
+    "LBOAnalysisPlugin",
+    "DDMValuationPlugin",
+]
