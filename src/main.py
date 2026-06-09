@@ -61,7 +61,7 @@ scheduler: TaskScheduler = None
 def register_integrations():
     """注册所有集成适配器"""
     registry.register(BacktraderAdapter(enabled=True))
-    registry.register(EasytraderAdapter(broker="ths", enabled=False))
+    registry.register(EasytraderAdapter(broker="ths", enabled=True))
     registry.register(QUANTAXISAdapter(enabled=True))
     registry.register(QbotAdapter(enabled=True))
     registry.register(AIQuantAdapter(enabled=True))

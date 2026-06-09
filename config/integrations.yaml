@@ -8,7 +8,7 @@ integrations:
     mongodb_uri: "mongodb://localhost:27017"
 
   easytrader:
-    enabled: false
+    enabled: true
     broker: "ths"
 
   qbot:
