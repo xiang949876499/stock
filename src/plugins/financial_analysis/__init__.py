@@ -4,6 +4,7 @@ from .comps import ComparableAnalysisPlugin
 from .screening import StockScreeningPlugin
 from .lbo import LBOAnalysisPlugin
 from .ddm import DDMValuationPlugin
+from .merger import MergerAnalysisPlugin
 
 __all__ = [
     "DCFValuationPlugin",
@@ -11,4 +12,5 @@ __all__ = [
     "StockScreeningPlugin",
     "LBOAnalysisPlugin",
     "DDMValuationPlugin",
+    "MergerAnalysisPlugin",
 ]
