@@ -21,6 +21,14 @@ from src.web.api.router import router as api_router
 from src.web.middleware.error_handler import stockhub_exception_handler, generic_exception_handler
 from src.exceptions import StockHubException
 
+# 集成适配器
+from src.integrations.registry import registry
+from src.integrations.backtrader.adapter import BacktraderAdapter
+from src.integrations.easytrader.adapter import EasytraderAdapter
+from src.integrations.quantaxis.adapter import QUANTAXISAdapter
+from src.integrations.qbot.adapter import QbotAdapter
+from src.integrations.ai_quant.adapter import AIQuantAdapter
+
 # 创建 FastAPI 应用
 app = FastAPI(
     title="Stock Hub API",
@@ -50,6 +58,15 @@ logger = None
 scheduler: TaskScheduler = None
 
 
+def register_integrations():
+    """注册所有集成适配器"""
+    registry.register(BacktraderAdapter(enabled=True))
+    registry.register(EasytraderAdapter(broker="ths", enabled=False))
+    registry.register(QUANTAXISAdapter(enabled=False))
+    registry.register(QbotAdapter(enabled=True))
+    registry.register(AIQuantAdapter(enabled=True))
+
+
 @app.on_event("startup")
 async def startup():
     """应用启动"""
@@ -61,6 +78,10 @@ async def startup():
     # 设置日志
     logger = setup_logger("stock-hub", settings.log_dir)
     logger.info("应用启动", version=settings.app_version)
+
+    # 注册并初始化集成适配器
+    register_integrations()
+    await registry.initialize_all()
 
     # 启动调度器
     scheduler = TaskScheduler()

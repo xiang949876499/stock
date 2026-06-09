@@ -1,0 +1,20 @@
+integrations:
+  backtrader:
+    enabled: true
+    strategies_path: "./strategies/backtrader"
+
+  quantaxis:
+    enabled: false
+    mongodb_uri: "mongodb://localhost:27017"
+
+  easytrader:
+    enabled: false
+    broker: "ths"
+
+  qbot:
+    enabled: true
+    models_path: "./models/qbot"
+
+  ai_quant:
+    enabled: true
+    strategies_path: "./strategies/ai_quant"
