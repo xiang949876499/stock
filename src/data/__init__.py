@@ -7,6 +7,7 @@ from .catalog.manager import InstrumentCatalog
 from .storage.parquet import ParquetStorage
 from .service import DataService
 from .connectors import DataConnector, ConnectorRegistry, HKStockConnector
+from .fetchers import StockFetcher
 
 __all__ = [
     "Market",
@@ -23,4 +24,5 @@ __all__ = [
     "DataConnector",
     "ConnectorRegistry",
     "HKStockConnector",
+    "StockFetcher",
 ]
