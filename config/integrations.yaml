@@ -4,7 +4,7 @@ integrations:
     strategies_path: "./strategies/backtrader"
 
   quantaxis:
-    enabled: false
+    enabled: true
     mongodb_uri: "mongodb://localhost:27017"
 
   easytrader:
