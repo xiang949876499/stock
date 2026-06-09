@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Table, Tag, Card, Row, Col, Statistic, Select, Space, Empty, Button, message } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { ReloadOutlined, StarFilled } from '@ant-design/icons'
 import { newsApi } from '../services/api'
 import type { NewsItem } from '../types'
 
@@ -24,6 +24,48 @@ const HOT_STOCKS = [
   { code: '09988', name: '阿里巴巴', market: 'HK' },
   { code: '01810', name: '小米集团', market: 'HK' },
 ]
+
+// 股票名称映射
+const STOCK_NAMES: Record<string, string> = {
+  '600519': '贵州茅台',
+  '000858': '五粮液',
+  '601318': '中国平安',
+  '000333': '美的集团',
+  '300750': '宁德时代',
+  '002594': '比亚迪',
+  '600036': '招商银行',
+  '002230': '科大讯飞',
+  '688981': '中芯国际',
+  '300059': '东方财富',
+  '002415': '海康威视',
+  '600309': '万华化学',
+  '000651': '格力电器',
+  '601012': '隆基绿能',
+  '600900': '长江电力',
+  '601398': '工商银行',
+  '000725': '京东方A',
+  '002352': '顺丰控股',
+  '002475': '立讯精密',
+  '300015': '爱尔眼科',
+  '600276': '恒瑞医药',
+  '300760': '迈瑞医疗',
+  '000538': '云南白药',
+  '601688': '华泰证券',
+  '600030': '中信证券',
+  '00700': '腾讯控股',
+  '09988': '阿里巴巴',
+  '01810': '小米集团',
+  '03690': '美团',
+  '09999': '网易',
+  '09618': '京东',
+  '09888': '百度',
+  '01024': '快手',
+  '02020': '安踏体育',
+  '01211': '比亚迪',
+  '02318': '中国平安',
+  '00941': '中国移动',
+  '00388': '港交所',
+}
 
 // 模拟新闻数据
 const MOCK_NEWS: NewsItem[] = [
@@ -95,6 +137,19 @@ const News = () => {
   const [loading, setLoading] = useState(false)
   const [symbol, setSymbol] = useState('600519')
   const [market, setMarket] = useState('A')
+  const [watchlist, setWatchlist] = useState<string[]>([])
+
+  // 加载自选股
+  useEffect(() => {
+    const saved = localStorage.getItem('watchlist')
+    if (saved) {
+      try {
+        setWatchlist(JSON.parse(saved))
+      } catch (e) {
+        console.error('解析自选股失败:', e)
+      }
+    }
+  }, [])
 
   const fetchNews = async () => {
     setLoading(true)
@@ -201,8 +256,35 @@ const News = () => {
     },
   ]
 
-  // 按市场筛选股票
-  const filteredStocks = HOT_STOCKS.filter(s => s.market === market)
+  // 获取股票名称
+  const getStockName = (code: string) => {
+    return STOCK_NAMES[code] || code
+  }
+
+  // 合并自选股和热门股票（自选股在前，去重）
+  const getStockOptions = () => {
+    const watchlistStocks = watchlist
+      .filter(code => {
+        // 根据市场筛选
+        if (market === 'A') return !code.startsWith('0') || code.length === 6
+        if (market === 'HK') return code.length === 5
+        return true
+      })
+      .map(code => ({
+        code,
+        name: getStockName(code),
+        market: code.length === 5 ? 'HK' : 'A',
+        isWatchlist: true,
+      }))
+
+    const hotStocks = HOT_STOCKS
+      .filter(s => s.market === market && !watchlist.includes(s.code))
+      .map(s => ({ ...s, isWatchlist: false }))
+
+    return [...watchlistStocks, ...hotStocks]
+  }
+
+  const stockOptions = getStockOptions()
 
   return (
     <div>
@@ -217,14 +299,18 @@ const News = () => {
           <Select
             value={symbol}
             onChange={setSymbol}
-            style={{ width: 200 }}
+            style={{ width: 250 }}
             showSearch
             placeholder="选择股票"
             optionFilterProp="children"
           >
-            {filteredStocks.map(s => (
+            {stockOptions.map(s => (
               <Option key={s.code} value={s.code}>
-                {s.name} ({s.code})
+                <Space>
+                  {s.isWatchlist && <StarFilled style={{ color: '#faad14' }} />}
+                  <span>{s.name}</span>
+                  <span style={{ color: '#999' }}>({s.code})</span>
+                </Space>
               </Option>
             ))}
           </Select>
