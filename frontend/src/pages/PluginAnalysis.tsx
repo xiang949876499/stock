@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Input, Typography, Alert, Descriptions, Tag, Table, Spin, Empty } from 'antd';
+import { Card, Input, Typography, Alert, Descriptions, Tag, Table, Spin, Empty, Button, Space, message } from 'antd';
+import { DownloadOutlined, FileTextOutlined, FileExcelOutlined } from '@ant-design/icons';
 import PluginSelector from '../components/PluginSelector';
 import ParameterForm from '../components/ParameterForm';
 import SlashCommand from '../components/SlashCommand';
@@ -23,6 +24,7 @@ const PluginAnalysis = () => {
   const [pluginsLoading, setPluginsLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string>('');
+  const [exporting, setExporting] = useState(false);
 
   // 加载插件列表
   useEffect(() => {
@@ -108,6 +110,35 @@ const PluginAnalysis = () => {
         .finally(() => setLoading(false));
     },
     [symbol]
+  );
+
+  // 导出分析结果
+  const handleExport = useCallback(
+    async (format: 'json' | 'csv') => {
+      if (!selectedPlugin || !symbol) return;
+
+      setExporting(true);
+      try {
+        const res = await pluginApi.export(selectedPlugin, symbol, format);
+        const blob = new Blob([res.data]);
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        link.download = `${selectedPlugin}_${symbol}_${timestamp}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        message.success(`已导出 ${format.toUpperCase()} 文件`);
+      } catch (err) {
+        console.error('导出失败:', err);
+        message.error('导出失败，请重试');
+      } finally {
+        setExporting(false);
+      }
+    },
+    [selectedPlugin, symbol]
   );
 
   // 渲染结果
@@ -238,7 +269,32 @@ const PluginAnalysis = () => {
       )}
 
       {result && !loading && (
-        <Card title="分析结果" style={{ marginTop: 16 }}>
+        <Card
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>分析结果</span>
+              <Space>
+                <Button
+                  size="small"
+                  icon={<FileTextOutlined />}
+                  loading={exporting}
+                  onClick={() => handleExport('json')}
+                >
+                  导出 JSON
+                </Button>
+                <Button
+                  size="small"
+                  icon={<FileExcelOutlined />}
+                  loading={exporting}
+                  onClick={() => handleExport('csv')}
+                >
+                  导出 CSV
+                </Button>
+              </Space>
+            </div>
+          }
+          style={{ marginTop: 16 }}
+        >
           {renderResult(result)}
         </Card>
       )}

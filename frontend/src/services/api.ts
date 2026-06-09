@@ -102,6 +102,12 @@ export const pluginApi = {
 
   execute: (pluginName: string, request: { symbol: string; params: Record<string, any> }) =>
     api.post(`/plugins/${pluginName}/execute`, request),
+
+  export: (pluginName: string, symbol: string, format: string = 'json') =>
+    api.get(`/plugins/${pluginName}/export`, {
+      params: { symbol, format },
+      responseType: 'blob',
+    }),
 }
 
 export default api
