@@ -9,6 +9,7 @@ import Portfolio from './pages/Portfolio'
 import News from './pages/News'
 import Recommend from './pages/Recommend'
 import Settings from './pages/Settings'
+import PluginAnalysis from './pages/PluginAnalysis'
 import AppHeader from './components/AppHeader'
 import AppSidebar from './components/AppSidebar'
 
@@ -30,6 +31,7 @@ function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/news" element={<News />} />
             <Route path="/recommend" element={<Recommend />} />
+            <Route path="/plugins" element={<PluginAnalysis />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Content>

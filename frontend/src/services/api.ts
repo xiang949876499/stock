@@ -92,4 +92,16 @@ export const recommendApi = {
     api.get(`/recommend/stocks/${symbol}/evaluate`, { params: { market } }),
 }
 
+// 插件相关
+export const pluginApi = {
+  list: () =>
+    api.get<Record<string, string>>('/plugins/'),
+
+  getInfo: (pluginName: string) =>
+    api.get(`/plugins/${pluginName}`),
+
+  execute: (pluginName: string, request: { symbol: string; params: Record<string, any> }) =>
+    api.post(`/plugins/${pluginName}/execute`, request),
+}
+
 export default api

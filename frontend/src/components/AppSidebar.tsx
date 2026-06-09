@@ -8,6 +8,7 @@ import {
   FundOutlined,
   FileTextOutlined,
   StarOutlined,
+  AppstoreOutlined,
   SettingOutlined,
 } from '@ant-design/icons'
 
@@ -48,6 +49,11 @@ const menuItems = [
     key: '/news',
     icon: <FileTextOutlined />,
     label: '新闻舆情',
+  },
+  {
+    key: '/plugins',
+    icon: <AppstoreOutlined />,
+    label: '插件分析',
   },
   {
     key: '/settings',
