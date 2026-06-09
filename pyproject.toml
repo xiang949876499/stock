@@ -70,6 +70,42 @@ qlib = [
     "xgboost>=2.0.0",
 ]
 
+backtrader = [
+    "backtrader>=1.9.78",
+]
+
+quantaxis = [
+    "quantaxis>=2.1.0",
+    "pymongo>=4.0",
+]
+
+easytrader = [
+    "easytrader>=0.16",
+    "pywinauto>=0.6",
+]
+
+qbot = [
+    "torch>=2.0",
+    "stable-baselines3>=2.0",
+]
+
+ai-quant = [
+    "scikit-learn>=1.3",
+    "xgboost>=2.0",
+]
+
+all-integrations = [
+    "backtrader>=1.9.78",
+    "quantaxis>=2.1.0",
+    "pymongo>=4.0",
+    "easytrader>=0.16",
+    "pywinauto>=0.6",
+    "torch>=2.0",
+    "stable-baselines3>=2.0",
+    "scikit-learn>=1.3",
+    "xgboost>=2.0",
+]
+
 [project.scripts]
 stock-hub = "src.main:cli"
 
