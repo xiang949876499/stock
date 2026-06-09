@@ -1,0 +1,1031 @@
+{
+  "600519": {
+    "vt_symbol": "600519.SSE",
+    "name": "贵州茅台",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "000858": {
+    "vt_symbol": "000858.SZE",
+    "name": "五粮液",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "000568": {
+    "vt_symbol": "000568.SZE",
+    "name": "泸州老窖",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "600809": {
+    "vt_symbol": "600809.SSE",
+    "name": "山西汾酒",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "002304": {
+    "vt_symbol": "002304.SZE",
+    "name": "洋河股份",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "000799": {
+    "vt_symbol": "000799.SZE",
+    "name": "酒鬼酒",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "603369": {
+    "vt_symbol": "603369.SSE",
+    "name": "今世缘",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "000596": {
+    "vt_symbol": "000596.SZE",
+    "name": "古井贡酒",
+    "market": "A",
+    "industry": "白酒",
+    "lot_size": 100
+  },
+  "601318": {
+    "vt_symbol": "601318.SSE",
+    "name": "中国平安",
+    "market": "A",
+    "industry": "保险",
+    "lot_size": 100
+  },
+  "601601": {
+    "vt_symbol": "601601.SSE",
+    "name": "中国太保",
+    "market": "A",
+    "industry": "保险",
+    "lot_size": 100
+  },
+  "601628": {
+    "vt_symbol": "601628.SSE",
+    "name": "中国人寿",
+    "market": "A",
+    "industry": "保险",
+    "lot_size": 100
+  },
+  "600036": {
+    "vt_symbol": "600036.SSE",
+    "name": "招商银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "601166": {
+    "vt_symbol": "601166.SSE",
+    "name": "兴业银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "601398": {
+    "vt_symbol": "601398.SSE",
+    "name": "工商银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "601288": {
+    "vt_symbol": "601288.SSE",
+    "name": "农业银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "601988": {
+    "vt_symbol": "601988.SSE",
+    "name": "中国银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "601939": {
+    "vt_symbol": "601939.SSE",
+    "name": "建设银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "600000": {
+    "vt_symbol": "600000.SSE",
+    "name": "浦发银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "601818": {
+    "vt_symbol": "601818.SSE",
+    "name": "光大银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "002142": {
+    "vt_symbol": "002142.SZE",
+    "name": "宁波银行",
+    "market": "A",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "000333": {
+    "vt_symbol": "000333.SZE",
+    "name": "美的集团",
+    "market": "A",
+    "industry": "家电",
+    "lot_size": 100
+  },
+  "000651": {
+    "vt_symbol": "000651.SZE",
+    "name": "格力电器",
+    "market": "A",
+    "industry": "家电",
+    "lot_size": 100
+  },
+  "002032": {
+    "vt_symbol": "002032.SZE",
+    "name": "苏泊尔",
+    "market": "A",
+    "industry": "家电",
+    "lot_size": 100
+  },
+  "002050": {
+    "vt_symbol": "002050.SZE",
+    "name": "三花智控",
+    "market": "A",
+    "industry": "家电",
+    "lot_size": 100
+  },
+  "600887": {
+    "vt_symbol": "600887.SSE",
+    "name": "伊利股份",
+    "market": "A",
+    "industry": "食品",
+    "lot_size": 100
+  },
+  "603288": {
+    "vt_symbol": "603288.SSE",
+    "name": "海天味业",
+    "market": "A",
+    "industry": "食品",
+    "lot_size": 100
+  },
+  "002714": {
+    "vt_symbol": "002714.SZE",
+    "name": "牧原股份",
+    "market": "A",
+    "industry": "养殖",
+    "lot_size": 100
+  },
+  "300498": {
+    "vt_symbol": "300498.SZE",
+    "name": "温氏股份",
+    "market": "A",
+    "industry": "养殖",
+    "lot_size": 100
+  },
+  "600276": {
+    "vt_symbol": "600276.SSE",
+    "name": "恒瑞医药",
+    "market": "A",
+    "industry": "医药",
+    "lot_size": 100
+  },
+  "300760": {
+    "vt_symbol": "300760.SZE",
+    "name": "迈瑞医疗",
+    "market": "A",
+    "industry": "医药",
+    "lot_size": 100
+  },
+  "000538": {
+    "vt_symbol": "000538.SZE",
+    "name": "云南白药",
+    "market": "A",
+    "industry": "医药",
+    "lot_size": 100
+  },
+  "600196": {
+    "vt_symbol": "600196.SSE",
+    "name": "复星医药",
+    "market": "A",
+    "industry": "医药",
+    "lot_size": 100
+  },
+  "002007": {
+    "vt_symbol": "002007.SZE",
+    "name": "华兰生物",
+    "market": "A",
+    "industry": "医药",
+    "lot_size": 100
+  },
+  "300015": {
+    "vt_symbol": "300015.SZE",
+    "name": "爱尔眼科",
+    "market": "A",
+    "industry": "医疗",
+    "lot_size": 100
+  },
+  "601012": {
+    "vt_symbol": "601012.SSE",
+    "name": "隆基绿能",
+    "market": "A",
+    "industry": "光伏",
+    "lot_size": 100
+  },
+  "300750": {
+    "vt_symbol": "300750.SZE",
+    "name": "宁德时代",
+    "market": "A",
+    "industry": "电池",
+    "lot_size": 100
+  },
+  "002594": {
+    "vt_symbol": "002594.SZE",
+    "name": "比亚迪",
+    "market": "A",
+    "industry": "汽车",
+    "lot_size": 100
+  },
+  "600104": {
+    "vt_symbol": "600104.SSE",
+    "name": "上汽集团",
+    "market": "A",
+    "industry": "汽车",
+    "lot_size": 100
+  },
+  "601238": {
+    "vt_symbol": "601238.SSE",
+    "name": "广汽集团",
+    "market": "A",
+    "industry": "汽车",
+    "lot_size": 100
+  },
+  "600900": {
+    "vt_symbol": "600900.SSE",
+    "name": "长江电力",
+    "market": "A",
+    "industry": "电力",
+    "lot_size": 100
+  },
+  "600585": {
+    "vt_symbol": "600585.SSE",
+    "name": "海螺水泥",
+    "market": "A",
+    "industry": "建材",
+    "lot_size": 100
+  },
+  "000002": {
+    "vt_symbol": "000002.SZE",
+    "name": "万科A",
+    "market": "A",
+    "industry": "房地产",
+    "lot_size": 100
+  },
+  "600048": {
+    "vt_symbol": "600048.SSE",
+    "name": "保利发展",
+    "market": "A",
+    "industry": "房地产",
+    "lot_size": 100
+  },
+  "601888": {
+    "vt_symbol": "601888.SSE",
+    "name": "中国中免",
+    "market": "A",
+    "industry": "旅游",
+    "lot_size": 100
+  },
+  "600009": {
+    "vt_symbol": "600009.SSE",
+    "name": "上海机场",
+    "market": "A",
+    "industry": "机场",
+    "lot_size": 100
+  },
+  "002475": {
+    "vt_symbol": "002475.SZE",
+    "name": "立讯精密",
+    "market": "A",
+    "industry": "电子",
+    "lot_size": 100
+  },
+  "300059": {
+    "vt_symbol": "300059.SZE",
+    "name": "东方财富",
+    "market": "A",
+    "industry": "券商",
+    "lot_size": 100
+  },
+  "601688": {
+    "vt_symbol": "601688.SSE",
+    "name": "华泰证券",
+    "market": "A",
+    "industry": "券商",
+    "lot_size": 100
+  },
+  "600030": {
+    "vt_symbol": "600030.SSE",
+    "name": "中信证券",
+    "market": "A",
+    "industry": "券商",
+    "lot_size": 100
+  },
+  "601211": {
+    "vt_symbol": "601211.SSE",
+    "name": "国泰君安",
+    "market": "A",
+    "industry": "券商",
+    "lot_size": 100
+  },
+  "000725": {
+    "vt_symbol": "000725.SZE",
+    "name": "京东方A",
+    "market": "A",
+    "industry": "面板",
+    "lot_size": 100
+  },
+  "002415": {
+    "vt_symbol": "002415.SZE",
+    "name": "海康威视",
+    "market": "A",
+    "industry": "安防",
+    "lot_size": 100
+  },
+  "600309": {
+    "vt_symbol": "600309.SSE",
+    "name": "万华化学",
+    "market": "A",
+    "industry": "化工",
+    "lot_size": 100
+  },
+  "002352": {
+    "vt_symbol": "002352.SZE",
+    "name": "顺丰控股",
+    "market": "A",
+    "industry": "物流",
+    "lot_size": 100
+  },
+  "600031": {
+    "vt_symbol": "600031.SSE",
+    "name": "三一重工",
+    "market": "A",
+    "industry": "机械",
+    "lot_size": 100
+  },
+  "601100": {
+    "vt_symbol": "601100.SSE",
+    "name": "恒立液压",
+    "market": "A",
+    "industry": "机械",
+    "lot_size": 100
+  },
+  "300124": {
+    "vt_symbol": "300124.SZE",
+    "name": "汇川技术",
+    "market": "A",
+    "industry": "自动化",
+    "lot_size": 100
+  },
+  "002230": {
+    "vt_symbol": "002230.SZE",
+    "name": "科大讯飞",
+    "market": "A",
+    "industry": "AI",
+    "lot_size": 100
+  },
+  "688981": {
+    "vt_symbol": "688981.SSE",
+    "name": "中芯国际",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "002371": {
+    "vt_symbol": "002371.SZE",
+    "name": "北方华创",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "300782": {
+    "vt_symbol": "300782.SZE",
+    "name": "卓胜微",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "688012": {
+    "vt_symbol": "688012.SSE",
+    "name": "中微公司",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "688036": {
+    "vt_symbol": "688036.SSE",
+    "name": "传音控股",
+    "market": "A",
+    "industry": "手机",
+    "lot_size": 100
+  },
+  "688008": {
+    "vt_symbol": "688008.SSE",
+    "name": "澜起科技",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "688396": {
+    "vt_symbol": "688396.SSE",
+    "name": "华润微",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "603501": {
+    "vt_symbol": "603501.SSE",
+    "name": "韦尔股份",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "300661": {
+    "vt_symbol": "300661.SZE",
+    "name": "圣邦股份",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "300223": {
+    "vt_symbol": "300223.SZE",
+    "name": "北京君正",
+    "market": "A",
+    "industry": "半导体",
+    "lot_size": 100
+  },
+  "688256": {
+    "vt_symbol": "688256.SSE",
+    "name": "寒武纪",
+    "market": "A",
+    "industry": "AI芯片",
+    "lot_size": 100
+  },
+  "688111": {
+    "vt_symbol": "688111.SSE",
+    "name": "金山办公",
+    "market": "A",
+    "industry": "软件",
+    "lot_size": 100
+  },
+  "688188": {
+    "vt_symbol": "688188.SSE",
+    "name": "柏楚电子",
+    "market": "A",
+    "industry": "软件",
+    "lot_size": 100
+  },
+  "300496": {
+    "vt_symbol": "300496.SZE",
+    "name": "中科创达",
+    "market": "A",
+    "industry": "软件",
+    "lot_size": 100
+  },
+  "300033": {
+    "vt_symbol": "300033.SZE",
+    "name": "同花顺",
+    "market": "A",
+    "industry": "金融IT",
+    "lot_size": 100
+  },
+  "600588": {
+    "vt_symbol": "600588.SSE",
+    "name": "用友网络",
+    "market": "A",
+    "industry": "软件",
+    "lot_size": 100
+  },
+  "002410": {
+    "vt_symbol": "002410.SZE",
+    "name": "广联达",
+    "market": "A",
+    "industry": "软件",
+    "lot_size": 100
+  },
+  "300454": {
+    "vt_symbol": "300454.SZE",
+    "name": "深信服",
+    "market": "A",
+    "industry": "网络安全",
+    "lot_size": 100
+  },
+  "688561": {
+    "vt_symbol": "688561.SSE",
+    "name": "奇安信",
+    "market": "A",
+    "industry": "网络安全",
+    "lot_size": 100
+  },
+  "002236": {
+    "vt_symbol": "002236.SZE",
+    "name": "大华股份",
+    "market": "A",
+    "industry": "安防",
+    "lot_size": 100
+  },
+  "300433": {
+    "vt_symbol": "300433.SZE",
+    "name": "蓝思科技",
+    "market": "A",
+    "industry": "消费电子",
+    "lot_size": 100
+  },
+  "002600": {
+    "vt_symbol": "002600.SZE",
+    "name": "领益智造",
+    "market": "A",
+    "industry": "消费电子",
+    "lot_size": 100
+  },
+  "300136": {
+    "vt_symbol": "300136.SZE",
+    "name": "信维通信",
+    "market": "A",
+    "industry": "通信",
+    "lot_size": 100
+  },
+  "002281": {
+    "vt_symbol": "002281.SZE",
+    "name": "光迅科技",
+    "market": "A",
+    "industry": "光通信",
+    "lot_size": 100
+  },
+  "300502": {
+    "vt_symbol": "300502.SZE",
+    "name": "新易盛",
+    "market": "A",
+    "industry": "光通信",
+    "lot_size": 100
+  },
+  "002475": {
+    "vt_symbol": "002475.SZE",
+    "name": "立讯精密",
+    "market": "A",
+    "industry": "消费电子",
+    "lot_size": 100
+  },
+  "603160": {
+    "vt_symbol": "603160.SSE",
+    "name": "汇顶科技",
+    "market": "A",
+    "industry": "芯片设计",
+    "lot_size": 100
+  },
+  "300223": {
+    "vt_symbol": "300223.SZE",
+    "name": "北京君正",
+    "market": "A",
+    "industry": "芯片设计",
+    "lot_size": 100
+  },
+  "688099": {
+    "vt_symbol": "688099.SSE",
+    "name": "晶晨股份",
+    "market": "A",
+    "industry": "芯片设计",
+    "lot_size": 100
+  },
+  "300327": {
+    "vt_symbol": "300327.SZE",
+    "name": "中颖电子",
+    "market": "A",
+    "industry": "芯片设计",
+    "lot_size": 100
+  },
+  "300672": {
+    "vt_symbol": "300672.SZE",
+    "name": "国科微",
+    "market": "A",
+    "industry": "芯片设计",
+    "lot_size": 100
+  },
+  "603893": {
+    "vt_symbol": "603893.SSE",
+    "name": "瑞芯微",
+    "market": "A",
+    "industry": "芯片设计",
+    "lot_size": 100
+  },
+  "300750": {
+    "vt_symbol": "300750.SZE",
+    "name": "宁德时代",
+    "market": "A",
+    "industry": "新能源",
+    "lot_size": 100
+  },
+  "002812": {
+    "vt_symbol": "002812.SZE",
+    "name": "恩捷股份",
+    "market": "A",
+    "industry": "新能源",
+    "lot_size": 100
+  },
+  "300274": {
+    "vt_symbol": "300274.SZE",
+    "name": "阳光电源",
+    "market": "A",
+    "industry": "新能源",
+    "lot_size": 100
+  },
+  "688599": {
+    "vt_symbol": "688599.SSE",
+    "name": "天合光能",
+    "market": "A",
+    "industry": "光伏",
+    "lot_size": 100
+  },
+  "600438": {
+    "vt_symbol": "600438.SSE",
+    "name": "通威股份",
+    "market": "A",
+    "industry": "光伏",
+    "lot_size": 100
+  },
+  "601615": {
+    "vt_symbol": "601615.SSE",
+    "name": "明阳智能",
+    "market": "A",
+    "industry": "风电",
+    "lot_size": 100
+  },
+  "300750": {
+    "vt_symbol": "300750.SZE",
+    "name": "宁德时代",
+    "market": "A",
+    "industry": "电池",
+    "lot_size": 100
+  },
+  "002460": {
+    "vt_symbol": "002460.SZE",
+    "name": "赣锋锂业",
+    "market": "A",
+    "industry": "锂矿",
+    "lot_size": 100
+  },
+  "002466": {
+    "vt_symbol": "002466.SZE",
+    "name": "天齐锂业",
+    "market": "A",
+    "industry": "锂矿",
+    "lot_size": 100
+  },
+  "300014": {
+    "vt_symbol": "300014.SZE",
+    "name": "亿纬锂能",
+    "market": "A",
+    "industry": "电池",
+    "lot_size": 100
+  },
+  "688005": {
+    "vt_symbol": "688005.SSE",
+    "name": "容百科技",
+    "market": "A",
+    "industry": "电池材料",
+    "lot_size": 100
+  },
+  "600406": {
+    "vt_symbol": "600406.SSE",
+    "name": "国电南瑞",
+    "market": "A",
+    "industry": "电力设备",
+    "lot_size": 100
+  },
+  "300124": {
+    "vt_symbol": "300124.SZE",
+    "name": "汇川技术",
+    "market": "A",
+    "industry": "工业自动化",
+    "lot_size": 100
+  },
+  "688169": {
+    "vt_symbol": "688169.SSE",
+    "name": "石头科技",
+    "market": "A",
+    "industry": "机器人",
+    "lot_size": 100
+  },
+  "688022": {
+    "vt_symbol": "688022.SSE",
+    "name": "瀚川智能",
+    "market": "A",
+    "industry": "智能制造",
+    "lot_size": 100
+  },
+  "002747": {
+    "vt_symbol": "002747.SZE",
+    "name": "埃斯顿",
+    "market": "A",
+    "industry": "机器人",
+    "lot_size": 100
+  },
+  "300024": {
+    "vt_symbol": "300024.SZE",
+    "name": "机器人",
+    "market": "A",
+    "industry": "机器人",
+    "lot_size": 100
+  },
+  "688276": {
+    "vt_symbol": "688276.SSE",
+    "name": "百济神州",
+    "market": "A",
+    "industry": "创新药",
+    "lot_size": 100
+  },
+  "688180": {
+    "vt_symbol": "688180.SSE",
+    "name": "君实生物",
+    "market": "A",
+    "industry": "创新药",
+    "lot_size": 100
+  },
+  "300347": {
+    "vt_symbol": "300347.SZE",
+    "name": "泰格医药",
+    "market": "A",
+    "industry": "CRO",
+    "lot_size": 100
+  },
+  "300759": {
+    "vt_symbol": "300759.SZE",
+    "name": "康龙化成",
+    "market": "A",
+    "industry": "CRO",
+    "lot_size": 100
+  },
+  "688185": {
+    "vt_symbol": "688185.SSE",
+    "name": "康希诺",
+    "market": "A",
+    "industry": "疫苗",
+    "lot_size": 100
+  },
+  "300122": {
+    "vt_symbol": "300122.SZE",
+    "name": "智飞生物",
+    "market": "A",
+    "industry": "疫苗",
+    "lot_size": 100
+  },
+  "00700": {
+    "vt_symbol": "00700.HK",
+    "name": "腾讯控股",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "09988": {
+    "vt_symbol": "09988.HK",
+    "name": "阿里巴巴",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "03690": {
+    "vt_symbol": "03690.HK",
+    "name": "美团",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "09999": {
+    "vt_symbol": "09999.HK",
+    "name": "网易",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "01810": {
+    "vt_symbol": "01810.HK",
+    "name": "小米集团",
+    "market": "HK",
+    "industry": "手机",
+    "lot_size": 100
+  },
+  "02318": {
+    "vt_symbol": "02318.HK",
+    "name": "中国平安",
+    "market": "HK",
+    "industry": "保险",
+    "lot_size": 100
+  },
+  "00941": {
+    "vt_symbol": "00941.HK",
+    "name": "中国移动",
+    "market": "HK",
+    "industry": "电信",
+    "lot_size": 100
+  },
+  "00388": {
+    "vt_symbol": "00388.HK",
+    "name": "港交所",
+    "market": "HK",
+    "industry": "金融",
+    "lot_size": 100
+  },
+  "01211": {
+    "vt_symbol": "01211.HK",
+    "name": "比亚迪",
+    "market": "HK",
+    "industry": "汽车",
+    "lot_size": 100
+  },
+  "02020": {
+    "vt_symbol": "02020.HK",
+    "name": "安踏体育",
+    "market": "HK",
+    "industry": "体育",
+    "lot_size": 100
+  },
+  "01024": {
+    "vt_symbol": "01024.HK",
+    "name": "快手",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "09618": {
+    "vt_symbol": "09618.HK",
+    "name": "京东",
+    "market": "HK",
+    "industry": "电商",
+    "lot_size": 100
+  },
+  "09888": {
+    "vt_symbol": "09888.HK",
+    "name": "百度",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "00175": {
+    "vt_symbol": "00175.HK",
+    "name": "吉利汽车",
+    "market": "HK",
+    "industry": "汽车",
+    "lot_size": 100
+  },
+  "01919": {
+    "vt_symbol": "01919.HK",
+    "name": "中远海控",
+    "market": "HK",
+    "industry": "航运",
+    "lot_size": 100
+  },
+  "02628": {
+    "vt_symbol": "02628.HK",
+    "name": "中国人寿",
+    "market": "HK",
+    "industry": "保险",
+    "lot_size": 100
+  },
+  "00883": {
+    "vt_symbol": "00883.HK",
+    "name": "中国海洋石油",
+    "market": "HK",
+    "industry": "石油",
+    "lot_size": 100
+  },
+  "03988": {
+    "vt_symbol": "03988.HK",
+    "name": "中国银行",
+    "market": "HK",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "00939": {
+    "vt_symbol": "00939.HK",
+    "name": "建设银行",
+    "market": "HK",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "01398": {
+    "vt_symbol": "01398.HK",
+    "name": "工商银行",
+    "market": "HK",
+    "industry": "银行",
+    "lot_size": 100
+  },
+  "09626": {
+    "vt_symbol": "09626.HK",
+    "name": "哔哩哔哩",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "02518": {
+    "vt_symbol": "02518.HK",
+    "name": "汽车之家",
+    "market": "HK",
+    "industry": "互联网",
+    "lot_size": 100
+  },
+  "06060": {
+    "vt_symbol": "06060.HK",
+    "name": "众安在线",
+    "market": "HK",
+    "industry": "保险科技",
+    "lot_size": 100
+  },
+  "09961": {
+    "vt_symbol": "09961.HK",
+    "name": "携程",
+    "market": "HK",
+    "industry": "旅游",
+    "lot_size": 100
+  },
+  "09698": {
+    "vt_symbol": "09698.HK",
+    "name": "万国数据",
+    "market": "HK",
+    "industry": "数据中心",
+    "lot_size": 100
+  },
+  "09992": {
+    "vt_symbol": "09992.HK",
+    "name": "泡泡玛特",
+    "market": "HK",
+    "industry": "消费",
+    "lot_size": 100
+  },
+  "02015": {
+    "vt_symbol": "02015.HK",
+    "name": "理想汽车",
+    "market": "HK",
+    "industry": "新能源汽车",
+    "lot_size": 100
+  },
+  "09868": {
+    "vt_symbol": "09868.HK",
+    "name": "小鹏汽车",
+    "market": "HK",
+    "industry": "新能源汽车",
+    "lot_size": 100
+  },
+  "09866": {
+    "vt_symbol": "09866.HK",
+    "name": "蔚来",
+    "market": "HK",
+    "industry": "新能源汽车",
+    "lot_size": 100
+  },
+  "09689": {
+    "vt_symbol": "09689.HK",
+    "name": "叮咚买菜",
+    "market": "HK",
+    "industry": "生鲜电商",
+    "lot_size": 100
+  },
+  "01478": {
+    "vt_symbol": "01478.HK",
+    "name": "丘钛科技",
+    "market": "HK",
+    "industry": "摄像头模组",
+    "lot_size": 100
+  },
+  "00285": {
+    "vt_symbol": "00285.HK",
+    "name": "比亚迪电子",
+    "market": "HK",
+    "industry": "电子制造",
+    "lot_size": 100
+  },
+  "02382": {
+    "vt_symbol": "02382.HK",
+    "name": "舜宇光学",
+    "market": "HK",
+    "industry": "光学",
+    "lot_size": 100
+  },
+  "06969": {
+    "vt_symbol": "06969.HK",
+    "name": "思摩尔",
+    "market": "HK",
+    "industry": "电子烟",
+    "lot_size": 100
+  }
+}

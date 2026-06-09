@@ -39,11 +39,18 @@ env/
 .env.*.local
 
 # Data
-data/
+data/daily/
+data/minute/
+data/financial/
+data/news/
+data/cache/
 logs/
 *.parquet
 *.sqlite
 *.db
+
+# 保留 catalog 目录
+!data/catalog/
 
 # qlib
 qlib_data/
@@ -53,7 +60,6 @@ qlib_data/
 
 # Signals
 signals/
-*.json
 
 # OS
 .DS_Store
