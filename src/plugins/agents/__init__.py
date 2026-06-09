@@ -4,6 +4,7 @@ from .registry import AgentRegistry
 from .market_researcher import MarketResearcherAgent
 from .earnings_reviewer import EarningsReviewerAgent
 from .portfolio_manager import PortfolioManagerAgent
+from .risk_manager import RiskManagerAgent
 
 __all__ = [
     "AnalysisAgent",
@@ -11,4 +12,5 @@ __all__ = [
     "MarketResearcherAgent",
     "EarningsReviewerAgent",
     "PortfolioManagerAgent",
+    "RiskManagerAgent",
 ]

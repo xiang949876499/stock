@@ -23,10 +23,11 @@ PluginRegistry.register(EarningsAnalysisPlugin())
 PluginRegistry.register(OnePagerPlugin())
 
 # 注册内置代理
-from .agents import AgentRegistry, MarketResearcherAgent, EarningsReviewerAgent, PortfolioManagerAgent
+from .agents import AgentRegistry, MarketResearcherAgent, EarningsReviewerAgent, PortfolioManagerAgent, RiskManagerAgent
 
 AgentRegistry.register("market_researcher", MarketResearcherAgent)
 AgentRegistry.register("earnings_reviewer", EarningsReviewerAgent)
 AgentRegistry.register("portfolio_manager", PortfolioManagerAgent)
+AgentRegistry.register("risk_manager", RiskManagerAgent)
 
 __all__ = ["AnalysisPlugin", "PluginRegistry", "AgentRegistry"]
