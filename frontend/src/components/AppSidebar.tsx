@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   StarOutlined,
   AppstoreOutlined,
+  ExperimentOutlined,
   SettingOutlined,
 } from '@ant-design/icons'
 
@@ -54,6 +55,11 @@ const menuItems = [
     key: '/plugins',
     icon: <AppstoreOutlined />,
     label: '插件分析',
+  },
+  {
+    key: '/backtest',
+    icon: <ExperimentOutlined />,
+    label: '回测管理',
   },
   {
     key: '/settings',

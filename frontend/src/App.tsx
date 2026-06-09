@@ -8,6 +8,7 @@ import Signals from './pages/Signals'
 import Portfolio from './pages/Portfolio'
 import News from './pages/News'
 import Recommend from './pages/Recommend'
+import Backtest from './pages/Backtest'
 import Settings from './pages/Settings'
 import PluginAnalysis from './pages/PluginAnalysis'
 import AppHeader from './components/AppHeader'
@@ -32,6 +33,7 @@ function App() {
             <Route path="/news" element={<News />} />
             <Route path="/recommend" element={<Recommend />} />
             <Route path="/plugins" element={<PluginAnalysis />} />
+            <Route path="/backtest" element={<Backtest />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Content>
