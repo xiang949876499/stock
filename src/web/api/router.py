@@ -10,6 +10,8 @@ from .backtest import router as backtest_router
 from .news import router as news_router
 from .agent import router as agent_router
 from .recommend import router as recommend_router
+from .plugins import router as plugins_router
+from .commands import router as commands_router
 
 router = APIRouter(prefix="/api/v1")
 
@@ -22,6 +24,8 @@ router.include_router(backtest_router)
 router.include_router(news_router)
 router.include_router(agent_router)
 router.include_router(recommend_router)
+router.include_router(plugins_router)
+router.include_router(commands_router)
 
 
 @router.get("/")
