@@ -23,6 +23,11 @@ class SignalSource(str, Enum):
     MANUAL = "manual"
     LLM_PROPOSED = "llm_proposed"
     FINRL_X = "finrl_x"
+    # 新增集成来源
+    BACKTRADER = "backtrader"
+    QBOT_RL = "qbot_rl"
+    AI_QUANT = "ai_quant"
+    QUANTAXIS = "quantaxis"
 
 
 class SignalV1(BaseModel):
