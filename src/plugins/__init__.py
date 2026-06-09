@@ -14,4 +14,9 @@ PluginRegistry.register(ComparableAnalysisPlugin())
 PluginRegistry.register(StockScreeningPlugin())
 PluginRegistry.register(EarningsAnalysisPlugin())
 
-__all__ = ["AnalysisPlugin", "PluginRegistry"]
+# 注册内置代理
+from .agents import AgentRegistry, MarketResearcherAgent
+
+AgentRegistry.register("market_researcher", MarketResearcherAgent)
+
+__all__ = ["AnalysisPlugin", "PluginRegistry", "AgentRegistry"]
