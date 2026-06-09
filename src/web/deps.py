@@ -9,6 +9,7 @@ from src.execution.service import ExecutionService
 from src.analysis.service import AnalysisService
 from src.analysis.ai.factory import AIModelFactory
 from src.news.service import NewsService
+from src.integrations.backtrader.adapter import BacktraderAdapter
 
 
 @lru_cache()
@@ -41,3 +42,9 @@ def get_analysis_service() -> AnalysisService:
 def get_news_service() -> NewsService:
     """获取新闻服务"""
     return NewsService()
+
+
+@lru_cache()
+def get_backtrader_adapter() -> BacktraderAdapter:
+    """获取 Backtrader 适配器"""
+    return BacktraderAdapter()
