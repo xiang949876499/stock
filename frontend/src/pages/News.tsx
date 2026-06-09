@@ -351,8 +351,8 @@ const News = () => {
             <Card>
               <Statistic
                 title="利好/利空"
-                value={`${sentiment.positive_count}/${sentiment.negative_count}`}
-                valueStyle={{ color: sentiment.positive_count > sentiment.negative_count ? '#3f8600' : '#cf1322' }}
+                value={`${sentiment.positive_count || sentiment.positive || 0}/${sentiment.negative_count || sentiment.negative || 0}`}
+                valueStyle={{ color: (sentiment.positive_count || sentiment.positive || 0) > (sentiment.negative_count || sentiment.negative || 0) ? '#3f8600' : '#cf1322' }}
               />
             </Card>
           </Col>
