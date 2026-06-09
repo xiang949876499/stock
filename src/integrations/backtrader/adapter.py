@@ -94,11 +94,34 @@ class BacktraderAdapter(BaseAdapter):
         cerebro.broker.setcommission(commission=0.001)
 
         # 添加数据源
+        data_count = 0
         for symbol in symbols:
             feed = create_data_feed_from_service(symbol, start_date, end_date)
-            if feed:
+            if feed is not None:
                 cerebro.adddata(feed, name=symbol)
+                data_count += 1
                 self.logger.info(f"添加数据源: {symbol}")
+            else:
+                self.logger.warning(f"无法获取数据: {symbol}")
+
+        # 检查是否有数据
+        if data_count == 0:
+            self.logger.error("没有可用的数据源")
+            return BacktestResult(
+                backtest_id=backtest_id,
+                strategy_name=strategy_name,
+                symbols=symbols,
+                start_date=start_date,
+                end_date=end_date,
+                initial_capital=initial_capital,
+                final_value=initial_capital,
+                total_return=0.0,
+                annual_return=0.0,
+                max_drawdown=0.0,
+                sharpe_ratio=0.0,
+                trades=[],
+                equity_curve=[],
+            )
 
         # 添加策略
         if params:

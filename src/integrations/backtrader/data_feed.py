@@ -67,18 +67,40 @@ def create_data_feed_from_service(
     start_date: str,
     end_date: str,
 ) -> Optional[DataFrameDataFeed]:
-    """从 DataService 创建数据源"""
-    from src.data.service import DataService
-
+    """从 akshare 创建数据源"""
     try:
-        service = DataService()
-        df = service.get_stock_data(symbol, start_date, end_date)
+        import akshare as ak
+
+        # 获取日线数据
+        df = ak.stock_zh_a_hist(
+            symbol=symbol,
+            period="daily",
+            start_date=start_date.replace('-', ''),
+            end_date=end_date.replace('-', ''),
+            adjust="qfq"
+        )
 
         if df is None or df.empty:
             logger.warning(f"无法获取数据: {symbol}")
             return None
 
-        return DataFrameDataFeed(df)
+        # 转换列名
+        df = df.rename(columns={
+            '日期': 'datetime',
+            '开盘': 'open',
+            '最高': 'high',
+            '最低': 'low',
+            '收盘': 'close',
+            '成交量': 'volume',
+        })
+
+        # 转换日期格式
+        df['datetime'] = pd.to_datetime(df['datetime'])
+
+        # 只保留需要的列
+        df = df[['datetime', 'open', 'high', 'low', 'close', 'volume']]
+
+        return DataFrameDataFeed.from_dataframe(df)
     except Exception as e:
         logger.error(f"创建数据源失败: {e}")
         return None
