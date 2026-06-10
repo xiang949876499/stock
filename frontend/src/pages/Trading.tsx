@@ -213,16 +213,21 @@ const Trading = () => {
       key: 'symbol',
     },
     {
-      title: '置信度',
-      dataIndex: 'confidence',
-      key: 'confidence',
-      render: (val: number) => `${(val * 100)?.toFixed(1)}%`,
+      title: '策略',
+      dataIndex: 'strategy',
+      key: 'strategy',
     },
     {
-      title: '决策',
-      dataIndex: 'decision',
-      key: 'decision',
-      render: (decision: string) => {
+      title: '评分',
+      dataIndex: 'score',
+      key: 'score',
+      render: (val: number) => val?.toFixed(0),
+    },
+    {
+      title: '信号',
+      dataIndex: 'signal',
+      key: 'signal',
+      render: (signal: string) => {
         const colorMap: Record<string, string> = {
           buy: 'green',
           sell: 'red',
@@ -233,13 +238,29 @@ const Trading = () => {
           sell: '卖出',
           hold: '持有',
         }
-        return <Tag color={colorMap[decision] || 'default'}>{textMap[decision] || decision}</Tag>
+        return <Tag color={colorMap[signal] || 'default'}>{textMap[signal] || signal}</Tag>
       },
     },
     {
-      title: '内容',
-      dataIndex: 'content',
-      key: 'content',
+      title: '执行状态',
+      dataIndex: 'action_taken',
+      key: 'action_taken',
+      render: (val: string) => {
+        const colorMap: Record<string, string> = {
+          executed: 'green',
+          skipped: 'orange',
+        }
+        const textMap: Record<string, string> = {
+          executed: '已执行',
+          skipped: '已跳过',
+        }
+        return <Tag color={colorMap[val] || 'default'}>{textMap[val] || val}</Tag>
+      },
+    },
+    {
+      title: '原因',
+      dataIndex: 'reason',
+      key: 'reason',
       ellipsis: true,
     },
   ]
