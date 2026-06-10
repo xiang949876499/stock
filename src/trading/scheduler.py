@@ -102,7 +102,10 @@ class TradingScheduler:
             return
 
         logger.info("开始盘中分析周期")
-        # TODO: 执行盘中分析逻辑
+        try:
+            await self.engine.run_analysis_cycle()
+        except Exception as e:
+            logger.error(f"盘中分析失败: {e}")
         logger.info("盘中分析周期完成")
 
     async def _generate_half_day_summary(self):

@@ -242,3 +242,141 @@ class SimulationEngine:
             "account": self._get_account(),
             "positions": self._get_positions(),
         }
+
+    # ── 分析周期 ────────────────────────────────────────────────────
+
+    async def run_analysis_cycle(self):
+        """执行一次盘中分析周期
+
+        1. 获取推荐股票
+        2. 对每只股票运行分析
+        3. 记录分析日志
+        """
+        logger.info("开始盘中分析周期")
+
+        # 获取推荐股票
+        try:
+            from src.analysis.strategies.stock_picker import get_stock_recommendations
+            recommendations = await get_stock_recommendations("A", 5)
+        except Exception as e:
+            logger.warning(f"获取推荐失败: {e}")
+            recommendations = []
+
+        if not recommendations:
+            logger.info("无推荐股票，跳过分析")
+            return
+
+        # 获取 AI 适配器
+        ai_adapter = None
+        try:
+            from src.config import get_settings
+            from src.analysis.ai.factory import AIModelFactory
+            config = get_settings()
+            ai_adapter = AIModelFactory.create(config)
+        except Exception as e:
+            logger.warning(f"AI 适配器初始化失败: {e}")
+
+        # 逐只分析
+        for stock in recommendations:
+            symbol = stock.get("symbol", "")
+            name = stock.get("name", symbol)
+            strategy = self.strategy_selector.select([stock.get("score", 50)])
+
+            try:
+                if ai_adapter:
+                    from src.analysis.service import AnalysisService
+                    service = AnalysisService(ai_adapter)
+                    result = await service.analyze_stock(symbol, strategy)
+
+                    # 记录分析日志
+                    self._record_analysis_log(
+                        symbol=symbol,
+                        strategy=strategy,
+                        score=result.score,
+                        signal=result.signal,
+                        trend=result.trend,
+                        reason=result.reason,
+                        action_taken="executed" if result.signal in ("buy", "sell") else "skipped",
+                        action_reason=f"信号: {result.signal}, 评分: {result.score}",
+                    )
+
+                    # 如果有明确信号，执行交易
+                    if result.signal == "buy" and result.score >= 60:
+                        self._execute_buy(symbol, name, result)
+                    elif result.signal == "sell" and result.score <= 40:
+                        self._execute_sell(symbol, name, result)
+
+                    logger.info(f"分析完成: {symbol} {result.signal} ({result.score}分)")
+                else:
+                    # 无 AI，仅记录技术评分
+                    self._record_analysis_log(
+                        symbol=symbol,
+                        strategy=strategy,
+                        score=stock.get("score", 0),
+                        signal="hold",
+                        trend="neutral",
+                        reason="AI 未配置，仅技术评分",
+                        action_taken="skipped",
+                        action_reason="AI 未配置",
+                    )
+                    logger.info(f"技术评分: {symbol} {stock.get('score', 0)}分")
+
+            except Exception as e:
+                logger.error(f"分析 {symbol} 失败: {e}")
+                self._record_analysis_log(
+                    symbol=symbol,
+                    strategy=strategy,
+                    score=0,
+                    signal="error",
+                    trend="unknown",
+                    reason=str(e),
+                    action_taken="skipped",
+                    action_reason=f"分析失败: {e}",
+                )
+
+        # 更新总资产
+        self._update_total_assets()
+        logger.info("盘中分析周期完成")
+
+    def _execute_buy(self, symbol: str, name: str, result):
+        """执行买入"""
+        account = self._get_account()
+        balance = account["balance"]
+        # 用 10% 资金买入
+        buy_amount = balance * 0.10
+        if buy_amount < 1000:
+            logger.info(f"资金不足，跳过买入: {symbol}")
+            return
+
+        # 获取当前价格（使用评分中的数据）
+        price = 100.0  # 简化：使用固定价格，实际应从数据源获取
+        volume = int(buy_amount / price / 100) * 100  # 取整到 100 股
+        if volume <= 0:
+            return
+
+        actual_amount = price * volume
+        commission = actual_amount * 0.0003
+
+        self._update_account_balance("BUY", actual_amount, commission)
+        self._update_position(symbol, name, "BUY", price, volume)
+        self._record_trade(symbol, name, "BUY", price, volume, actual_amount, commission,
+                           strategy=result.signal, signal_score=result.score, signal_reason=result.reason)
+        logger.info(f"模拟买入: {symbol} {volume}股 @ {price}")
+
+    def _execute_sell(self, symbol: str, name: str, result):
+        """执行卖出"""
+        positions = self._get_positions()
+        pos = next((p for p in positions if p["symbol"] == symbol), None)
+        if not pos:
+            return
+
+        price = pos.get("current_price", pos.get("avg_cost", 100.0))
+        volume = pos["volume"]
+        actual_amount = price * volume
+        commission = actual_amount * 0.0003
+
+        self._update_account_balance("SELL", actual_amount, commission)
+        self._update_position(symbol, name, "SELL", price, volume)
+        self._record_trade(symbol, name, "SELL", price, volume, actual_amount, commission,
+                           strategy=result.signal, signal_score=result.score, signal_reason=result.reason)
+        logger.info(f"模拟卖出: {symbol} {volume}股 @ {price}")

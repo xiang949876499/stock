@@ -203,6 +203,17 @@ async def start_trading(engine: SimulationEngine = Depends(get_engine)):
         raise HTTPException(500, f"启动交易失败: {e}")
 
 
+@router.post("/analyze")
+async def run_analysis(engine: SimulationEngine = Depends(get_engine)):
+    """手动触发一次分析"""
+    try:
+        await engine.run_analysis_cycle()
+        return {"status": "completed", "message": "分析完成"}
+    except Exception as e:
+        logger.error(f"分析失败: {e}")
+        raise HTTPException(500, f"分析失败: {e}")
+
+
 @router.post("/stop")
 async def stop_trading(engine: SimulationEngine = Depends(get_engine)):
     """停止交易"""

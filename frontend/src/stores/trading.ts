@@ -77,6 +77,7 @@ interface TradingState {
   fetchAnalysisLogs: (date?: string) => Promise<void>
   startTrading: () => Promise<void>
   stopTrading: () => Promise<void>
+  runAnalysis: () => Promise<void>
   resetAccount: (initialCapital?: number) => Promise<void>
   fetchStatus: () => Promise<void>
 }
@@ -165,6 +166,26 @@ export const useTradingStore = create<TradingState>((set) => ({
       set({ running: false, loading: false })
     } catch (error: any) {
       const msg = error.response?.data?.detail || error.message || '停止失败'
+      set({ error: msg, loading: false })
+      throw new Error(msg)
+    }
+  },
+
+  runAnalysis: async () => {
+    set({ loading: true, error: null })
+    try {
+      await tradingApi.analyze()
+      set({ loading: false })
+      // 分析完成后刷新数据
+      const store = useTradingStore.getState()
+      await Promise.allSettled([
+        store.fetchTrades(),
+        store.fetchAnalysisLogs(),
+        store.fetchAccount(),
+        store.fetchPositions(),
+      ])
+    } catch (error: any) {
+      const msg = error.response?.data?.detail || error.message || '分析失败'
       set({ error: msg, loading: false })
       throw new Error(msg)
     }

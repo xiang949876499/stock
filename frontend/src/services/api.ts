@@ -104,6 +104,7 @@ export const tradingApi = {
   getAnalysisLogs: (date?: string) => api.get('/trading/analysis-logs', { params: { date } }),
   start: () => api.post('/trading/start'),
   stop: () => api.post('/trading/stop'),
+  analyze: () => api.post('/trading/analyze'),
   getStatus: () => api.get('/trading/status'),
 }
 

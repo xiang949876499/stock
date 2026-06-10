@@ -18,6 +18,7 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   ReloadOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
 import { useTradingStore } from '../stores/trading'
 import { formatDateTime, formatAmount } from '../utils'
@@ -36,6 +37,7 @@ const Trading = () => {
     fetchAnalysisLogs,
     startTrading,
     stopTrading,
+    runAnalysis,
     resetAccount,
     fetchStatus,
   } = useTradingStore()
@@ -64,6 +66,18 @@ const Trading = () => {
       }
     } catch (error: any) {
       message.error(`操作失败: ${error.message || '未知错误'}`)
+    }
+  }
+
+  const handleAnalyze = async () => {
+    try {
+      message.loading('正在分析...', 0)
+      await runAnalysis()
+      message.destroy()
+      message.success('分析完成')
+    } catch (error: any) {
+      message.destroy()
+      message.error(`分析失败: ${error.message || '未知错误'}`)
     }
   }
 
@@ -358,6 +372,13 @@ const Trading = () => {
           loading={loading}
         >
           重置账户
+        </Button>
+        <Button
+          icon={<ThunderboltOutlined />}
+          onClick={handleAnalyze}
+          loading={loading}
+        >
+          手动分析
         </Button>
       </Space>
 
