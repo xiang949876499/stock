@@ -57,6 +57,11 @@ const menuItems = [
     label: '插件分析',
   },
   {
+    key: '/trading',
+    icon: <FundOutlined />,
+    label: '模拟交易',
+  },
+  {
     key: '/backtest',
     icon: <ExperimentOutlined />,
     label: '回测管理',

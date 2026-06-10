@@ -11,6 +11,7 @@ import Recommend from './pages/Recommend'
 import Backtest from './pages/Backtest'
 import Settings from './pages/Settings'
 import PluginAnalysis from './pages/PluginAnalysis'
+import Trading from './pages/Trading'
 import AppHeader from './components/AppHeader'
 import AppSidebar from './components/AppSidebar'
 
@@ -34,6 +35,7 @@ function App() {
             <Route path="/recommend" element={<Recommend />} />
             <Route path="/plugins" element={<PluginAnalysis />} />
             <Route path="/backtest" element={<Backtest />} />
+            <Route path="/trading" element={<Trading />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Content>
