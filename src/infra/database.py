@@ -18,7 +18,7 @@ class Database:
 
     def connect(self):
         """连接数据库"""
-        self.conn = sqlite3.connect(str(self.db_path))
+        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         logger.info(f"连接数据库: {self.db_path}")
 
