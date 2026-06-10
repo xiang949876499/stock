@@ -3,10 +3,12 @@
 
 from .models import TradingRule, RuleCheckResult, RuleEffectiveness
 from .matcher import RuleMatcher
+from .checker import RuleChecker
 
 __all__ = [
     "TradingRule",
     "RuleCheckResult",
     "RuleEffectiveness",
     "RuleMatcher",
+    "RuleChecker",
 ]
