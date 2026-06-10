@@ -71,3 +71,93 @@ class Database:
 
         self.commit()
         logger.info("初始化数据库表")
+
+    def init_sim_tables(self):
+        """初始化模拟交易表"""
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS sim_accounts (
+                account_id TEXT PRIMARY KEY,
+                initial_capital REAL NOT NULL,
+                balance REAL NOT NULL,
+                frozen REAL DEFAULT 0,
+                total_assets REAL NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS sim_positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                name TEXT,
+                volume INTEGER NOT NULL,
+                avg_cost REAL NOT NULL,
+                current_price REAL,
+                market_value REAL,
+                pnl REAL,
+                pnl_pct REAL,
+                open_date TEXT,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, symbol)
+            )
+        """)
+
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS sim_trades (
+                trade_id TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                name TEXT,
+                side TEXT NOT NULL,
+                price REAL NOT NULL,
+                volume INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                commission REAL DEFAULT 0,
+                strategy TEXT,
+                signal_score REAL,
+                signal_reason TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS sim_daily_reports (
+                report_id TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                report_date TEXT NOT NULL,
+                total_assets REAL,
+                daily_pnl REAL,
+                daily_pnl_pct REAL,
+                total_pnl REAL,
+                total_pnl_pct REAL,
+                max_drawdown REAL,
+                win_rate REAL,
+                trade_count INTEGER,
+                report_markdown TEXT,
+                mistakes TEXT,
+                strategy_adjustments TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, report_date)
+            )
+        """)
+
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS sim_analysis_logs (
+                log_id TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                strategy TEXT,
+                score REAL,
+                signal TEXT,
+                trend TEXT,
+                reason TEXT,
+                action_taken TEXT,
+                action_reason TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.commit()
+        logger.info("初始化模拟交易表")
