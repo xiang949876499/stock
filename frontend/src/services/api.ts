@@ -92,6 +92,21 @@ export const recommendApi = {
     api.get(`/recommend/stocks/${symbol}/evaluate`, { params: { market } }),
 }
 
+// 模拟交易相关
+export const tradingApi = {
+  getAccount: () => api.get('/trading/account'),
+  resetAccount: (initialCapital: number = 1000000) => api.post('/trading/account/reset', { initial_capital: initialCapital }),
+  getPositions: () => api.get('/trading/positions'),
+  getTrades: (date?: string) => api.get('/trading/trades', { params: { date } }),
+  getReports: () => api.get('/trading/reports'),
+  getReport: (date: string) => api.get(`/trading/reports/${date}`),
+  getMistakes: (date: string) => api.get(`/trading/reports/${date}/mistakes`),
+  getAnalysisLogs: (date?: string) => api.get('/trading/analysis-logs', { params: { date } }),
+  start: () => api.post('/trading/start'),
+  stop: () => api.post('/trading/stop'),
+  getStatus: () => api.get('/trading/status'),
+}
+
 // 插件相关
 export const pluginApi = {
   list: () =>
