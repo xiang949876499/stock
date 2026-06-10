@@ -11,7 +11,7 @@ version = "0.1.0"
 description = "量化交易一体化平台"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 authors = [
     { name = "Stock Hub Team" },
 ]
@@ -75,7 +75,7 @@ backtrader = [
 ]
 
 quantaxis = [
-    "quantaxis>=2.1.0",
+    "quantaxis>=2.0.0",
     "pymongo>=4.0",
 ]
 
@@ -96,7 +96,7 @@ ai-quant = [
 
 all-integrations = [
     "backtrader>=1.9.78",
-    "quantaxis>=2.1.0",
+    "quantaxis>=2.0.0",
     "pymongo>=4.0",
     "easytrader>=0.16",
     "pywinauto>=0.6",
