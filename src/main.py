@@ -17,6 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config import Settings, get_settings
 from src.infra.logger import setup_logger, get_logger
 from src.infra.scheduler import TaskScheduler
+from src.infra.database import Database
+from src.trading.scheduler import TradingScheduler
+from src.trading.engine import SimulationEngine
 from src.web.api.router import router as api_router
 from src.web.middleware.error_handler import stockhub_exception_handler, generic_exception_handler
 from src.exceptions import StockHubException
@@ -56,6 +59,7 @@ app.include_router(api_router)
 settings: Settings = None
 logger = None
 scheduler: TaskScheduler = None
+trading_scheduler: TradingScheduler = None
 
 
 def register_integrations():
@@ -70,7 +74,7 @@ def register_integrations():
 @app.on_event("startup")
 async def startup():
     """应用启动"""
-    global settings, logger, scheduler
+    global settings, logger, scheduler, trading_scheduler
 
     # 加载配置
     settings = get_settings()
@@ -88,11 +92,23 @@ async def startup():
     scheduler.setup()
     scheduler.start()
 
+    # 初始化模拟交易
+    db = Database("./data/sim_trading.db")
+    db.connect()
+    db.init_sim_tables()
+    engine = SimulationEngine(db)
+    trading_scheduler = TradingScheduler()
+    trading_scheduler.setup(engine)
+    trading_scheduler.start()
+    logger.info("模拟交易调度器启动")
+
 
 @app.on_event("shutdown")
 async def shutdown():
     """应用关闭"""
-    global scheduler
+    global scheduler, trading_scheduler
+    if trading_scheduler:
+        trading_scheduler.stop()
     if scheduler:
         scheduler.stop()
     if logger:
