@@ -123,12 +123,23 @@ class StockAgent:
             "kdj_j": context.get("kdj_j", 0),
         }
 
-        # 获取提示词
+        # 获取提示词（优先使用交易准则构建，失败则回退到策略模板）
         try:
-            prompt = strategy.get_prompt_template().format(**default_context)
-        except KeyError as e:
-            logger.warning(f"提示词模板缺少参数: {e}")
-            prompt = strategy.get_prompt_template()
+            from src.trading_rules.service import TradingRuleService
+            rules_service = TradingRuleService()
+            prompt = rules_service.build_analysis_prompt(
+                stock_data=default_context,
+                stock_name=default_context.get("stock_name", stock_code),
+                stock_code=stock_code
+            )
+            logger.info(f"已加载交易准则构建提示词: {stock_code}")
+        except Exception as e:
+            logger.warning(f"加载交易准则失败，回退到策略模板: {e}")
+            try:
+                prompt = strategy.get_prompt_template().format(**default_context)
+            except KeyError as e2:
+                logger.warning(f"提示词模板缺少参数: {e2}")
+                prompt = strategy.get_prompt_template()
 
         # AI 分析
         if self.ai_adapter:
