@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   Card,
   Row,
@@ -23,6 +23,8 @@ import {
 import { useTradingStore } from '../stores/trading'
 import { formatDateTime, formatAmount } from '../utils'
 
+const REFRESH_INTERVAL = 10000 // 10 秒刷新一次
+
 const Trading = () => {
   const {
     account,
@@ -42,6 +44,9 @@ const Trading = () => {
     fetchStatus,
   } = useTradingStore()
 
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // 初始加载
   useEffect(() => {
     const loadAll = async () => {
       await Promise.allSettled([
@@ -54,6 +59,27 @@ const Trading = () => {
     }
     loadAll()
   }, [])
+
+  // 运行中定时刷新
+  useEffect(() => {
+    if (running) {
+      const refresh = async () => {
+        await Promise.allSettled([
+          fetchAccount(),
+          fetchPositions(),
+          fetchTrades(),
+          fetchAnalysisLogs(),
+        ])
+      }
+      timerRef.current = setInterval(refresh, REFRESH_INTERVAL)
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [running])
 
   const handleToggleTrading = async () => {
     try {
@@ -96,17 +122,12 @@ const Trading = () => {
     })
   }
 
+  // ── 持仓列 ──────────────────────────────────────────────────
+
   const positionColumns = [
-    {
-      title: '股票代码',
-      dataIndex: 'symbol',
-      key: 'symbol',
-    },
-    {
-      title: '持仓数量',
-      dataIndex: 'quantity',
-      key: 'quantity',
-    },
+    { title: '股票代码', dataIndex: 'symbol', key: 'symbol' },
+    { title: '名称', dataIndex: 'name', key: 'name' },
+    { title: '持仓数量', dataIndex: 'volume', key: 'volume' },
     {
       title: '成本价',
       dataIndex: 'avg_cost',
@@ -121,9 +142,9 @@ const Trading = () => {
     },
     {
       title: '市值',
+      dataIndex: 'market_value',
       key: 'market_value',
-      render: (_: any, record: any) =>
-        formatAmount(record.quantity * record.current_price),
+      render: (val: number) => formatAmount(val || 0),
     },
     {
       title: '盈亏',
@@ -131,8 +152,7 @@ const Trading = () => {
       key: 'pnl',
       render: (pnl: number) => (
         <Tag color={pnl >= 0 ? 'green' : 'red'} icon={pnl >= 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}>
-          {pnl >= 0 ? '+' : ''}
-          {pnl?.toFixed(2)}
+          {pnl >= 0 ? '+' : ''}{pnl?.toFixed(2)}
         </Tag>
       ),
     },
@@ -142,32 +162,30 @@ const Trading = () => {
       key: 'pnl_pct',
       render: (pct: number) => (
         <Tag color={pct >= 0 ? 'green' : 'red'}>
-          {pct >= 0 ? '+' : ''}
-          {(pct * 100)?.toFixed(2)}%
+          {pct >= 0 ? '+' : ''}{(pct * 100)?.toFixed(2)}%
         </Tag>
       ),
     },
   ]
 
+  // ── 交易记录列 ──────────────────────────────────────────────
+
   const tradeColumns = [
     {
       title: '时间',
-      dataIndex: 'executed_at',
-      key: 'executed_at',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: (val: string) => formatDateTime(val),
     },
-    {
-      title: '股票代码',
-      dataIndex: 'symbol',
-      key: 'symbol',
-    },
+    { title: '股票代码', dataIndex: 'symbol', key: 'symbol' },
+    { title: '名称', dataIndex: 'name', key: 'name' },
     {
       title: '方向',
-      dataIndex: 'direction',
-      key: 'direction',
-      render: (direction: string) => (
-        <Tag color={direction === 'BUY' ? 'green' : 'red'}>
-          {direction === 'BUY' ? '买入' : '卖出'}
+      dataIndex: 'side',
+      key: 'side',
+      render: (side: string) => (
+        <Tag color={side === 'BUY' ? 'green' : 'red'}>
+          {side === 'BUY' ? '买入' : '卖出'}
         </Tag>
       ),
     },
@@ -177,11 +195,7 @@ const Trading = () => {
       key: 'price',
       render: (val: number) => val?.toFixed(2),
     },
-    {
-      title: '数量',
-      dataIndex: 'quantity',
-      key: 'quantity',
-    },
+    { title: '数量', dataIndex: 'volume', key: 'volume' },
     {
       title: '金额',
       dataIndex: 'amount',
@@ -189,16 +203,21 @@ const Trading = () => {
       render: (val: number) => formatAmount(val),
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'executed' ? 'blue' : 'default'}>
-          {status}
-        </Tag>
-      ),
+      title: '手续费',
+      dataIndex: 'commission',
+      key: 'commission',
+      render: (val: number) => val?.toFixed(2),
+    },
+    { title: '策略', dataIndex: 'strategy', key: 'strategy' },
+    {
+      title: '评分',
+      dataIndex: 'signal_score',
+      key: 'signal_score',
+      render: (val: number) => val?.toFixed(0),
     },
   ]
+
+  // ── 分析日志列 ──────────────────────────────────────────────
 
   const analysisLogColumns = [
     {
@@ -207,16 +226,8 @@ const Trading = () => {
       key: 'created_at',
       render: (val: string) => formatDateTime(val),
     },
-    {
-      title: '股票代码',
-      dataIndex: 'symbol',
-      key: 'symbol',
-    },
-    {
-      title: '策略',
-      dataIndex: 'strategy',
-      key: 'strategy',
-    },
+    { title: '股票代码', dataIndex: 'symbol', key: 'symbol' },
+    { title: '策略', dataIndex: 'strategy', key: 'strategy' },
     {
       title: '评分',
       dataIndex: 'score',
@@ -228,16 +239,8 @@ const Trading = () => {
       dataIndex: 'signal',
       key: 'signal',
       render: (signal: string) => {
-        const colorMap: Record<string, string> = {
-          buy: 'green',
-          sell: 'red',
-          hold: 'blue',
-        }
-        const textMap: Record<string, string> = {
-          buy: '买入',
-          sell: '卖出',
-          hold: '持有',
-        }
+        const colorMap: Record<string, string> = { buy: 'green', sell: 'red', hold: 'blue' }
+        const textMap: Record<string, string> = { buy: '买入', sell: '卖出', hold: '持有' }
         return <Tag color={colorMap[signal] || 'default'}>{textMap[signal] || signal}</Tag>
       },
     },
@@ -246,35 +249,29 @@ const Trading = () => {
       dataIndex: 'action_taken',
       key: 'action_taken',
       render: (val: string) => {
-        const colorMap: Record<string, string> = {
-          executed: 'green',
-          skipped: 'orange',
-        }
-        const textMap: Record<string, string> = {
-          executed: '已执行',
-          skipped: '已跳过',
-        }
+        const colorMap: Record<string, string> = { executed: 'green', skipped: 'orange' }
+        const textMap: Record<string, string> = { executed: '已执行', skipped: '已跳过' }
         return <Tag color={colorMap[val] || 'default'}>{textMap[val] || val}</Tag>
       },
     },
-    {
-      title: '原因',
-      dataIndex: 'reason',
-      key: 'reason',
-      ellipsis: true,
-    },
+    { title: '原因', dataIndex: 'reason', key: 'reason', ellipsis: true },
   ]
 
-  const totalAssets = account?.total_assets || 0
-  const cash = account?.cash || 0
-  const totalPnl = account?.total_pnl || 0
-  const totalPnlPct = account?.total_pnl_pct || 0
+  // ── 统计数据 ────────────────────────────────────────────────
+
+  const initialCapital = account?.initial_capital || 1000000
+  const totalAssets = account?.total_assets || initialCapital
+  const balance = account?.balance || 0
+  const totalPnl = totalAssets - initialCapital
+  const totalPnlPct = initialCapital > 0 ? totalPnl / initialCapital : 0
   const positionCount = positions.length
+
+  // ── 标签页 ──────────────────────────────────────────────────
 
   const tabItems = [
     {
       key: 'positions',
-      label: '持仓',
+      label: `持仓 (${positionCount})`,
       children: (
         <Table
           columns={positionColumns}
@@ -282,12 +279,13 @@ const Trading = () => {
           rowKey="symbol"
           loading={loading}
           pagination={false}
+          size="small"
         />
       ),
     },
     {
       key: 'trades',
-      label: '交易记录',
+      label: `交易记录 (${trades.length})`,
       children: (
         <Table
           columns={tradeColumns}
@@ -295,12 +293,13 @@ const Trading = () => {
           rowKey="trade_id"
           loading={loading}
           pagination={{ pageSize: 20 }}
+          size="small"
         />
       ),
     },
     {
       key: 'analysis',
-      label: '分析日志',
+      label: `分析日志 (${analysisLogs.length})`,
       children: (
         <Table
           columns={analysisLogColumns}
@@ -308,6 +307,7 @@ const Trading = () => {
           rowKey="log_id"
           loading={loading}
           pagination={{ pageSize: 20 }}
+          size="small"
         />
       ),
     },
@@ -315,27 +315,21 @@ const Trading = () => {
 
   return (
     <div>
-      <h2>模拟交易</h2>
+      <h2>
+        模拟交易
+        {running && <Tag color="green" style={{ marginLeft: 8 }}>运行中</Tag>}
+      </h2>
 
+      {/* 统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="总资产"
-              value={totalAssets}
-              precision={2}
-              suffix="元"
-            />
+            <Statistic title="总资产" value={totalAssets} precision={2} suffix="元" />
           </Card>
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="可用资金"
-              value={cash}
-              precision={2}
-              suffix="元"
-            />
+            <Statistic title="可用资金" value={balance} precision={2} suffix="元" />
           </Card>
         </Col>
         <Col span={4}>
@@ -364,20 +358,22 @@ const Trading = () => {
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic title="持仓数量" value={positionCount} />
+            <Statistic title="持仓数量" value={positionCount} suffix="只" />
           </Card>
         </Col>
         <Col span={4}>
           <Card>
             <Statistic
-              title="状态"
-              value={running ? '运行中' : '已停止'}
-              valueStyle={{ color: running ? '#3f8600' : '#999' }}
+              title="初始资金"
+              value={initialCapital}
+              precision={0}
+              suffix="元"
             />
           </Card>
         </Col>
       </Row>
 
+      {/* 控制栏 */}
       <Space style={{ marginBottom: 16 }}>
         <Button
           type="primary"
@@ -388,21 +384,22 @@ const Trading = () => {
           {running ? '停止交易' : '启动交易'}
         </Button>
         <Button
-          icon={<ReloadOutlined />}
-          onClick={handleReset}
-          loading={loading}
-        >
-          重置账户
-        </Button>
-        <Button
           icon={<ThunderboltOutlined />}
           onClick={handleAnalyze}
           loading={loading}
         >
           手动分析
         </Button>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={handleReset}
+          loading={loading}
+        >
+          重置账户
+        </Button>
       </Space>
 
+      {/* 详情标签页 */}
       <Card>
         <Tabs items={tabItems} />
       </Card>

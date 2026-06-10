@@ -1,63 +1,78 @@
 import { create } from 'zustand'
 import { tradingApi } from '../services/api'
 
+// ── 接口定义（匹配后端 API 返回） ─────────────────────────
+
 export interface TradingAccount {
   account_id: string
   initial_capital: number
-  cash: number
+  balance: number
+  frozen: number
   total_assets: number
-  total_pnl: number
-  total_pnl_pct: number
   created_at: string
+  updated_at: string
 }
 
 export interface TradingPosition {
   symbol: string
-  market: string
-  quantity: number
+  name: string
+  volume: number
   avg_cost: number
   current_price: number
+  market_value: number
   pnl: number
   pnl_pct: number
+  open_date: string
 }
 
 export interface TradingTrade {
   trade_id: string
-  signal_id: string
+  account_id: string
   symbol: string
-  market: string
-  direction: string
-  quantity: number
+  name: string
+  side: string        // BUY / SELL
   price: number
+  volume: number
   amount: number
-  status: string
-  executed_at: string
+  commission: number
+  strategy: string
+  signal_score: number
+  signal_reason: string
+  created_at: string
 }
 
 export interface TradingReport {
-  date: string
+  report_id: string
+  account_id: string
+  report_date: string
   total_assets: number
-  cash: number
-  position_value: number
   daily_pnl: number
   daily_pnl_pct: number
   total_pnl: number
   total_pnl_pct: number
-  trade_count: number
-  win_count: number
+  max_drawdown: number
   win_rate: number
+  trade_count: number
+  report_markdown: string
+  mistakes: string
+  strategy_adjustments: string
 }
 
 export interface AnalysisLog {
   log_id: string
-  date: string
+  account_id: string
   symbol: string
-  market: string
-  content: string
-  decision: string
-  confidence: number
+  strategy: string
+  score: number
+  signal: string
+  trend: string
+  reason: string
+  action_taken: string
+  action_reason: string
   created_at: string
 }
+
+// ── Store 状态 ────────────────────────────────────────────
 
 interface TradingState {
   account: TradingAccount | null
@@ -82,7 +97,9 @@ interface TradingState {
   fetchStatus: () => Promise<void>
 }
 
-export const useTradingStore = create<TradingState>((set) => ({
+// ── Store 实现 ────────────────────────────────────────────
+
+export const useTradingStore = create<TradingState>((set, get) => ({
   account: null,
   positions: [],
   trades: [],
@@ -177,7 +194,7 @@ export const useTradingStore = create<TradingState>((set) => ({
       await tradingApi.analyze()
       set({ loading: false })
       // 分析完成后刷新数据
-      const store = useTradingStore.getState()
+      const store = get()
       await Promise.allSettled([
         store.fetchTrades(),
         store.fetchAnalysisLogs(),
@@ -194,8 +211,16 @@ export const useTradingStore = create<TradingState>((set) => ({
   resetAccount: async (initialCapital: number = 1000000) => {
     set({ loading: true, error: null })
     try {
-      const response = await tradingApi.resetAccount(initialCapital)
-      set({ account: response.data, positions: [], trades: [], loading: false })
+      await tradingApi.resetAccount(initialCapital)
+      set({ loading: false })
+      // 重置后刷新数据
+      const store = get()
+      await Promise.allSettled([
+        store.fetchAccount(),
+        store.fetchPositions(),
+        store.fetchTrades(),
+        store.fetchAnalysisLogs(),
+      ])
     } catch (error: any) {
       const msg = error.response?.data?.detail || error.message || '重置失败'
       set({ error: msg, loading: false })
@@ -206,7 +231,11 @@ export const useTradingStore = create<TradingState>((set) => ({
   fetchStatus: async () => {
     try {
       const response = await tradingApi.getStatus()
-      set({ running: response.data.running })
+      set({
+        running: response.data.running,
+        account: response.data.account,
+        positions: response.data.positions,
+      })
     } catch (error: any) {
       console.error('获取状态失败:', error)
     }
