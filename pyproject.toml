@@ -75,7 +75,7 @@ backtrader = [
 ]
 
 quantaxis = [
-    "quantaxis>=2.0.0",
+    "quantaxis>=2.0.0.dev33",
     "pymongo>=4.0",
 ]
 
@@ -96,7 +96,7 @@ ai-quant = [
 
 all-integrations = [
     "backtrader>=1.9.78",
-    "quantaxis>=2.0.0",
+    "quantaxis>=2.0.0.dev33",
     "pymongo>=4.0",
     "easytrader>=0.16",
     "pywinauto>=0.6",
