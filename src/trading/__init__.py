@@ -4,6 +4,7 @@ from .models import SimAccount, SimPosition, SimTrade, SimDailyReport, SimAnalys
 from .strategy_selector import StrategySelector
 from .mistake_analyzer import MistakeAnalyzer
 from .engine import SimulationEngine
+from .scheduler import TradingScheduler
 
 __all__ = [
     "SimAccount",
@@ -14,4 +15,5 @@ __all__ = [
     "StrategySelector",
     "MistakeAnalyzer",
     "SimulationEngine",
+    "TradingScheduler",
 ]
