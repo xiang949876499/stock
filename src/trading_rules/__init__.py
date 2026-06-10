@@ -6,6 +6,7 @@ from .matcher import RuleMatcher
 from .checker import RuleChecker
 from .prompt_builder import RulePromptBuilder
 from .service import TradingRuleService
+from .api import router as rules_router
 
 __all__ = [
     "TradingRule",
@@ -15,4 +16,5 @@ __all__ = [
     "RuleChecker",
     "RulePromptBuilder",
     "TradingRuleService",
+    "rules_router",
 ]
