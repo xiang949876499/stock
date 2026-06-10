@@ -259,13 +259,23 @@ class SimulationEngine:
 
     # ── 准则检查 ────────────────────────────────────────────────────
 
-    def _check_rules(self, stock_data: dict, signal: str) -> list[dict]:
-        """运行交易准则检查，返回检查结果列表"""
+    async def _check_rules(self, stock: dict, signal: str) -> list[dict]:
+        """运行交易准则检查，返回检查结果列表
+
+        Args:
+            stock: 股票推荐数据（symbol, name, market, score）
+            signal: AI 分析信号（buy/sell/hold）
+        """
         rules_service = self._get_rules_service()
         if not rules_service:
             return []
 
         try:
+            # 获取技术指标数据供准则检查器使用
+            stock_data = await self._fetch_indicators(stock)
+            if not stock_data:
+                return []
+
             checker = rules_service.checker
             entry_results = checker.check_entry_rules(stock_data)
             exit_results = checker.check_exit_rules(stock_data)
@@ -284,6 +294,34 @@ class SimulationEngine:
         except Exception as e:
             logger.warning(f"准则检查失败: {e}")
             return []
+
+    async def _fetch_indicators(self, stock: dict) -> Optional[dict]:
+        """获取股票技术指标，转换为准则检查器所需的格式"""
+        try:
+            from src.data.service import DataService
+            from src.data.models import Market
+
+            data_service = DataService()
+            symbol = stock.get("symbol", "")
+            market_str = stock.get("market", "A")
+            market = Market(market_str)
+
+            indicators = await data_service.get_technical_indicators(symbol, market)
+
+            return {
+                "symbol": symbol,
+                "current_price": 0,
+                "ma5": indicators.ma5,
+                "ma10": indicators.ma10,
+                "ma20": indicators.ma20,
+                "ma60": indicators.ma60,
+                "pe_ratio": 0,
+                "volume": 0,
+                "avg_volume": 0,
+            }
+        except Exception as e:
+            logger.warning(f"获取 {stock.get('symbol')} 技术指标失败: {e}")
+            return None
 
     # ── 分析周期 ────────────────────────────────────────────────────
 
@@ -330,10 +368,37 @@ class SimulationEngine:
                     service = AnalysisService(ai_adapter)
                     result = await service.analyze_stock(symbol, strategy)
 
-                    # 运行准则检查
-                    rule_checks = self._check_rules(stock, result.signal)
+                    # 获取技术指标详情
+                    tech_detail = await self._get_technical_detail(symbol)
 
-                    # 记录分析日志（含准则检查结果）
+                    # 运行准则检查
+                    rule_checks = await self._check_rules(stock, result.signal)
+
+                    # 生成详细分析理由
+                    detailed_reason = self._build_detailed_reason(
+                        result, tech_detail, rule_checks, stock
+                    )
+
+                    # 判断执行状态
+                    if result.signal == "buy" and result.score >= 55:
+                        action_taken = "executed"
+                        action_reason = f"✅ 买入执行 | 评分 {result.score} ≥ 55 | {detailed_reason}"
+                        self._execute_buy(symbol, name, result)
+                    elif result.signal == "sell" and result.score <= 45:
+                        action_taken = "executed"
+                        action_reason = f"✅ 卖出执行 | 评分 {result.score} ≤ 45 | {detailed_reason}"
+                        self._execute_sell(symbol, name, result)
+                    elif result.signal == "buy":
+                        action_taken = "skipped"
+                        action_reason = f"⚠️ 买入信号但评分不足 ({result.score} < 55) | {detailed_reason}"
+                    elif result.signal == "sell":
+                        action_taken = "skipped"
+                        action_reason = f"⚠️ 卖出信号但评分过高 ({result.score} > 45) | {detailed_reason}"
+                    else:
+                        action_taken = "skipped"
+                        action_reason = f"⏸️ 持有观望 | {detailed_reason}"
+
+                    # 记录分析日志
                     self._record_analysis_log(
                         symbol=symbol,
                         strategy=strategy,
@@ -341,18 +406,12 @@ class SimulationEngine:
                         signal=result.signal,
                         trend=result.trend,
                         reason=result.reason,
-                        action_taken="executed" if result.signal in ("buy", "sell") else "skipped",
-                        action_reason=f"信号: {result.signal}, 评分: {result.score}",
+                        action_taken=action_taken,
+                        action_reason=action_reason,
                         rule_checks=rule_checks,
                     )
 
-                    # 如果有明确信号，执行交易
-                    if result.signal == "buy" and result.score >= 55:
-                        self._execute_buy(symbol, name, result)
-                    elif result.signal == "sell" and result.score <= 45:
-                        self._execute_sell(symbol, name, result)
-
-                    logger.info(f"分析完成: {symbol} {result.signal} ({result.score}分), 准则检查 {len(rule_checks)} 条")
+                    logger.info(f"分析完成: {symbol} {result.signal} ({result.score}分)")
                 else:
                     # 无 AI，仅记录技术评分
                     self._record_analysis_log(
@@ -363,9 +422,8 @@ class SimulationEngine:
                         trend="neutral",
                         reason="AI 未配置，仅技术评分",
                         action_taken="skipped",
-                        action_reason="AI 未配置",
+                        action_reason="AI 未配置，无法进行深度分析",
                     )
-                    logger.info(f"技术评分: {symbol} {stock.get('score', 0)}分")
 
             except Exception as e:
                 logger.error(f"分析 {symbol} 失败: {e}")
@@ -377,12 +435,73 @@ class SimulationEngine:
                     trend="unknown",
                     reason=str(e),
                     action_taken="skipped",
-                    action_reason=f"分析失败: {e}",
+                    action_reason=f"分析异常: {e}",
                 )
 
         # 更新总资产
         self._update_total_assets()
         logger.info("盘中分析周期完成")
+
+    def _build_detailed_reason(
+        self, result, tech_detail: dict, rule_checks: list, stock: dict
+    ) -> str:
+        """构建详细的分析理由"""
+        parts = []
+
+        # 1. AI 分析摘要
+        if result.reason:
+            # 截取前 100 字符
+            reason_brief = result.reason[:100] + "..." if len(result.reason) > 100 else result.reason
+            parts.append(f"AI分析: {reason_brief}")
+
+        # 2. 技术指标亮点
+        if tech_detail:
+            highlights = []
+            ma = tech_detail.get("ma", {})
+            macd = tech_detail.get("macd", {})
+            rsi = tech_detail.get("rsi", {})
+            volume = tech_detail.get("volume", {})
+
+            # 均线判断
+            if ma.get("ma5", 0) > ma.get("ma10", 0) > ma.get("ma20", 0):
+                highlights.append("均线多头排列")
+            elif ma.get("ma5", 0) < ma.get("ma10", 0) < ma.get("ma20", 0):
+                highlights.append("均线空头排列")
+
+            # MACD 判断
+            if macd.get("macd", 0) > 0 and macd.get("macd_signal", 0) > 0:
+                highlights.append("MACD金叉")
+            elif macd.get("macd", 0) < 0:
+                highlights.append("MACD死叉")
+
+            # RSI 判断
+            rsi_val = rsi.get("rsi_6", 50)
+            if rsi_val < 30:
+                highlights.append("RSI超卖")
+            elif rsi_val > 70:
+                highlights.append("RSI超买")
+
+            # 成交量判断
+            if volume.get("volume_ratio", 1) > 1.5:
+                highlights.append("放量")
+            elif volume.get("volume_ratio", 1) < 0.7:
+                highlights.append("缩量")
+
+            if highlights:
+                parts.append(f"技术面: {', '.join(highlights)}")
+
+        # 3. 准则检查结果
+        if rule_checks:
+            passed = [r for r in rule_checks if r.get("passed")]
+            failed = [r for r in rule_checks if not r.get("passed")]
+            if failed:
+                failed_titles = [r.get("rule_title", "") for r in failed[:3]]
+                parts.append(f"风险提示: {', '.join(failed_titles)}")
+            if passed:
+                passed_titles = [r.get("rule_title", "") for r in passed[:3]]
+                parts.append(f"符合准则: {', '.join(passed_titles)}")
+
+        return " | ".join(parts) if parts else "无详细分析"
 
     def _get_price(self, symbol: str) -> float:
         """获取股票当前价格"""

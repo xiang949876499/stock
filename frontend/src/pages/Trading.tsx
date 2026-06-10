@@ -11,6 +11,7 @@ import {
   message,
   Modal,
   Tabs,
+  Tooltip,
 } from 'antd'
 import {
   ArrowUpOutlined,
@@ -245,6 +246,33 @@ const Trading = () => {
       },
     },
     {
+      title: '准则检查',
+      dataIndex: 'rule_checks',
+      key: 'rule_checks',
+      render: (val: string | null) => {
+        if (!val) return <Tag>无</Tag>
+        try {
+          const checks = JSON.parse(val)
+          if (!Array.isArray(checks) || checks.length === 0) return <Tag>无</Tag>
+          const passed = checks.filter((c: any) => c.passed).length
+          const failed = checks.filter((c: any) => !c.passed).length
+          const tooltipContent = checks.map((c: any) => (
+            `${c.passed ? '✓' : '✗'} ${c.rule_title}: ${c.reason}`
+          )).join('\n')
+          return (
+            <Tooltip title={<pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{tooltipContent}</pre>}>
+              <Space size={4}>
+                {passed > 0 && <Tag color="green">✓{passed}</Tag>}
+                {failed > 0 && <Tag color="red">✗{failed}</Tag>}
+              </Space>
+            </Tooltip>
+          )
+        } catch {
+          return <Tag>解析失败</Tag>
+        }
+      },
+    },
+    {
       title: '执行状态',
       dataIndex: 'action_taken',
       key: 'action_taken',
@@ -254,7 +282,29 @@ const Trading = () => {
         return <Tag color={colorMap[val] || 'default'}>{textMap[val] || val}</Tag>
       },
     },
-    { title: '原因', dataIndex: 'reason', key: 'reason', ellipsis: true },
+    {
+      title: '详细分析',
+      dataIndex: 'action_reason',
+      key: 'action_reason',
+      ellipsis: true,
+      render: (val: string) => (
+        <Tooltip title={val}>
+          <span>{val}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: 'AI 分析',
+      dataIndex: 'reason',
+      key: 'reason',
+      width: 200,
+      ellipsis: true,
+      render: (val: string) => (
+        <Tooltip title={val}>
+          <span>{val}</span>
+        </Tooltip>
+      ),
+    },
   ]
 
   // ── 统计数据 ────────────────────────────────────────────────
