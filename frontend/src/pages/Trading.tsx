@@ -321,7 +321,7 @@ const Trading = () => {
       </h2>
 
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col span={4}>
           <Card>
             <Statistic title="总资产" value={totalAssets} precision={2} suffix="元" />
@@ -363,15 +363,28 @@ const Trading = () => {
         </Col>
         <Col span={4}>
           <Card>
-            <Statistic
-              title="初始资金"
-              value={initialCapital}
-              precision={0}
-              suffix="元"
-            />
+            <Statistic title="初始资金" value={initialCapital} precision={0} suffix="元" />
           </Card>
         </Col>
       </Row>
+
+      {/* 持仓概览 */}
+      {positions.length > 0 && (
+        <Card title="当前持仓" size="small" style={{ marginBottom: 16 }}>
+          <Space wrap>
+            {positions.map((p) => (
+              <Tag key={p.symbol} color="blue" style={{ padding: '4px 12px' }}>
+                {p.name || p.symbol} ({p.symbol}) × {p.volume}股
+                {p.pnl !== null && p.pnl !== undefined && (
+                  <span style={{ marginLeft: 8, color: p.pnl >= 0 ? '#3f8600' : '#cf1322' }}>
+                    {p.pnl >= 0 ? '+' : ''}{p.pnl.toFixed(2)}
+                  </span>
+                )}
+              </Tag>
+            ))}
+          </Space>
+        </Card>
+      )}
 
       {/* 控制栏 */}
       <Space style={{ marginBottom: 16 }}>
