@@ -92,64 +92,57 @@ export const useTradingStore = create<TradingState>((set) => ({
   error: null,
 
   fetchAccount: async () => {
-    set({ loading: true, error: null })
     try {
       const response = await tradingApi.getAccount()
-      set({ account: response.data, loading: false })
+      set({ account: response.data })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      console.error('获取账户失败:', error)
     }
   },
 
   fetchPositions: async () => {
-    set({ loading: true, error: null })
     try {
       const response = await tradingApi.getPositions()
-      set({ positions: response.data, loading: false })
+      set({ positions: response.data })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      console.error('获取持仓失败:', error)
     }
   },
 
   fetchTrades: async (date?: string) => {
-    set({ loading: true, error: null })
     try {
       const response = await tradingApi.getTrades(date)
-      set({ trades: response.data, loading: false })
+      set({ trades: response.data })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      console.error('获取交易记录失败:', error)
     }
   },
 
   fetchReports: async () => {
-    set({ loading: true, error: null })
     try {
       const response = await tradingApi.getReports()
-      set({ reports: response.data, loading: false })
+      set({ reports: response.data })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      console.error('获取报告失败:', error)
     }
   },
 
   fetchReport: async (date: string) => {
-    set({ loading: true, error: null })
     try {
       const response = await tradingApi.getReport(date)
-      set({ loading: false })
       return response.data
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      console.error('获取报告失败:', error)
       return null
     }
   },
 
   fetchAnalysisLogs: async (date?: string) => {
-    set({ loading: true, error: null })
     try {
       const response = await tradingApi.getAnalysisLogs(date)
-      set({ analysisLogs: response.data, loading: false })
+      set({ analysisLogs: response.data })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      console.error('获取分析日志失败:', error)
     }
   },
 
@@ -159,7 +152,9 @@ export const useTradingStore = create<TradingState>((set) => ({
       await tradingApi.start()
       set({ running: true, loading: false })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      const msg = error.response?.data?.detail || error.message || '启动失败'
+      set({ error: msg, loading: false })
+      throw new Error(msg)
     }
   },
 
@@ -169,7 +164,9 @@ export const useTradingStore = create<TradingState>((set) => ({
       await tradingApi.stop()
       set({ running: false, loading: false })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      const msg = error.response?.data?.detail || error.message || '停止失败'
+      set({ error: msg, loading: false })
+      throw new Error(msg)
     }
   },
 
@@ -179,7 +176,9 @@ export const useTradingStore = create<TradingState>((set) => ({
       const response = await tradingApi.resetAccount(initialCapital)
       set({ account: response.data, positions: [], trades: [], loading: false })
     } catch (error: any) {
-      set({ error: error.message, loading: false })
+      const msg = error.response?.data?.detail || error.message || '重置失败'
+      set({ error: msg, loading: false })
+      throw new Error(msg)
     }
   },
 
@@ -188,7 +187,7 @@ export const useTradingStore = create<TradingState>((set) => ({
       const response = await tradingApi.getStatus()
       set({ running: response.data.running })
     } catch (error: any) {
-      set({ error: error.message })
+      console.error('获取状态失败:', error)
     }
   },
 }))

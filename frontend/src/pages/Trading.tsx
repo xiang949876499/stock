@@ -41,20 +41,29 @@ const Trading = () => {
   } = useTradingStore()
 
   useEffect(() => {
-    fetchAccount()
-    fetchPositions()
-    fetchTrades()
-    fetchAnalysisLogs()
-    fetchStatus()
+    const loadAll = async () => {
+      await Promise.allSettled([
+        fetchAccount(),
+        fetchPositions(),
+        fetchTrades(),
+        fetchAnalysisLogs(),
+        fetchStatus(),
+      ])
+    }
+    loadAll()
   }, [])
 
   const handleToggleTrading = async () => {
-    if (running) {
-      await stopTrading()
-      message.success('交易已停止')
-    } else {
-      await startTrading()
-      message.success('交易已启动')
+    try {
+      if (running) {
+        await stopTrading()
+        message.success('交易已停止')
+      } else {
+        await startTrading()
+        message.success('交易已启动')
+      }
+    } catch (error: any) {
+      message.error(`操作失败: ${error.message || '未知错误'}`)
     }
   }
 
@@ -63,8 +72,12 @@ const Trading = () => {
       title: '确认重置',
       content: '重置将清空所有持仓和交易记录，确定要重置吗？',
       onOk: async () => {
-        await resetAccount()
-        message.success('账户已重置')
+        try {
+          await resetAccount()
+          message.success('账户已重置')
+        } catch (error: any) {
+          message.error(`重置失败: ${error.message || '未知错误'}`)
+        }
       },
     })
   }
