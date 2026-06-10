@@ -3,6 +3,7 @@
 协调 analysis -> signal -> execution -> recording 流程。
 """
 
+import json
 import uuid
 from datetime import date, datetime
 from typing import Optional
@@ -26,7 +27,18 @@ class SimulationEngine:
         self._running = False
         self.strategy_selector = StrategySelector()
         self.mistake_analyzer = MistakeAnalyzer()
+        self._rules_service = None
         self._init_account()
+
+    def _get_rules_service(self):
+        """延迟加载交易准则服务"""
+        if self._rules_service is None:
+            try:
+                from src.trading_rules.service import TradingRuleService
+                self._rules_service = TradingRuleService()
+            except Exception as e:
+                logger.warning(f"加载交易准则服务失败: {e}")
+        return self._rules_service
 
     # ── 账户初始化 ──────────────────────────────────────────────────
 
@@ -90,14 +102,16 @@ class SimulationEngine:
         reason: str,
         action_taken: str,
         action_reason: str,
+        rule_checks: Optional[list[dict]] = None,
     ):
         """写入分析日志"""
         log_id = f"L-{uuid.uuid4().hex[:12]}"
+        rule_checks_json = json.dumps(rule_checks, ensure_ascii=False) if rule_checks else None
         self.db.execute(
             "INSERT INTO sim_analysis_logs "
-            "(log_id, account_id, symbol, strategy, score, signal, trend, reason, action_taken, action_reason) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (log_id, self.account_id, symbol, strategy, score, signal, trend, reason, action_taken, action_reason),
+            "(log_id, account_id, symbol, strategy, score, signal, trend, reason, action_taken, action_reason, rule_checks) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (log_id, self.account_id, symbol, strategy, score, signal, trend, reason, action_taken, action_reason, rule_checks_json),
         )
         self.db.commit()
 
@@ -243,6 +257,34 @@ class SimulationEngine:
             "positions": self._get_positions(),
         }
 
+    # ── 准则检查 ────────────────────────────────────────────────────
+
+    def _check_rules(self, stock_data: dict, signal: str) -> list[dict]:
+        """运行交易准则检查，返回检查结果列表"""
+        rules_service = self._get_rules_service()
+        if not rules_service:
+            return []
+
+        try:
+            checker = rules_service.checker
+            entry_results = checker.check_entry_rules(stock_data)
+            exit_results = checker.check_exit_rules(stock_data)
+
+            all_results = entry_results + exit_results
+            return [
+                {
+                    "rule_id": r.rule_id,
+                    "rule_title": r.rule_title,
+                    "passed": r.passed,
+                    "score": r.score,
+                    "reason": r.reason,
+                }
+                for r in all_results
+            ]
+        except Exception as e:
+            logger.warning(f"准则检查失败: {e}")
+            return []
+
     # ── 分析周期 ────────────────────────────────────────────────────
 
     async def run_analysis_cycle(self):
@@ -257,7 +299,7 @@ class SimulationEngine:
         # 获取推荐股票
         try:
             from src.analysis.strategies.stock_picker import get_stock_recommendations
-            recommendations = await get_stock_recommendations("A", 5)
+            recommendations = await get_stock_recommendations("A", 10)
         except Exception as e:
             logger.warning(f"获取推荐失败: {e}")
             recommendations = []
@@ -288,7 +330,10 @@ class SimulationEngine:
                     service = AnalysisService(ai_adapter)
                     result = await service.analyze_stock(symbol, strategy)
 
-                    # 记录分析日志
+                    # 运行准则检查
+                    rule_checks = self._check_rules(stock, result.signal)
+
+                    # 记录分析日志（含准则检查结果）
                     self._record_analysis_log(
                         symbol=symbol,
                         strategy=strategy,
@@ -298,15 +343,16 @@ class SimulationEngine:
                         reason=result.reason,
                         action_taken="executed" if result.signal in ("buy", "sell") else "skipped",
                         action_reason=f"信号: {result.signal}, 评分: {result.score}",
+                        rule_checks=rule_checks,
                     )
 
                     # 如果有明确信号，执行交易
-                    if result.signal == "buy" and result.score >= 60:
+                    if result.signal == "buy" and result.score >= 55:
                         self._execute_buy(symbol, name, result)
-                    elif result.signal == "sell" and result.score <= 40:
+                    elif result.signal == "sell" and result.score <= 45:
                         self._execute_sell(symbol, name, result)
 
-                    logger.info(f"分析完成: {symbol} {result.signal} ({result.score}分)")
+                    logger.info(f"分析完成: {symbol} {result.signal} ({result.score}分), 准则检查 {len(rule_checks)} 条")
                 else:
                     # 无 AI，仅记录技术评分
                     self._record_analysis_log(
@@ -349,10 +395,24 @@ class SimulationEngine:
 
     def _execute_buy(self, symbol: str, name: str, result):
         """执行买入"""
+        # 检查是否已持有
+        positions = self._get_positions()
+        if any(p["symbol"] == symbol for p in positions):
+            logger.info(f"已持有 {symbol}，跳过买入")
+            return
+
         account = self._get_account()
         balance = account["balance"]
-        # 用 10% 资金买入
-        buy_amount = balance * 0.10
+        # 动态分配资金：根据持仓数量调整
+        position_count = len(positions)
+        if position_count < 5:
+            alloc_pct = 0.15  # 前 5 只各用 15%
+        elif position_count < 10:
+            alloc_pct = 0.08  # 6-10 只各用 8%
+        else:
+            alloc_pct = 0.05  # 10 只以上各用 5%
+
+        buy_amount = balance * alloc_pct
         if buy_amount < 1000:
             logger.info(f"资金不足，跳过买入: {symbol}")
             return
