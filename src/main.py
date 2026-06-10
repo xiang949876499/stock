@@ -17,9 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config import Settings, get_settings
 from src.infra.logger import setup_logger, get_logger
 from src.infra.scheduler import TaskScheduler
-from src.infra.database import Database
 from src.trading.scheduler import TradingScheduler
-from src.trading.engine import SimulationEngine
 from src.web.api.router import router as api_router
 from src.web.middleware.error_handler import stockhub_exception_handler, generic_exception_handler
 from src.exceptions import StockHubException
@@ -92,11 +90,9 @@ async def startup():
     scheduler.setup()
     scheduler.start()
 
-    # 初始化模拟交易
-    db = Database("./data/sim_trading.db")
-    db.connect()
-    db.init_sim_tables()
-    engine = SimulationEngine(db)
+    # 初始化模拟交易（使用全局单例引擎）
+    from src.web.api.trading import get_engine
+    engine = get_engine()
     trading_scheduler = TradingScheduler()
     trading_scheduler.setup(engine)
     trading_scheduler.start()

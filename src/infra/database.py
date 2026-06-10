@@ -1,5 +1,6 @@
 """数据库"""
 
+import threading
 from pathlib import Path
 import sqlite3
 
@@ -9,35 +10,57 @@ logger = get_logger("database")
 
 
 class Database:
-    """数据库"""
+    """数据库（线程安全）"""
 
     def __init__(self, db_path: str = "./data/stock_hub.db"):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = None
+        self._lock = threading.Lock()
 
     def connect(self):
         """连接数据库"""
-        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        logger.info(f"连接数据库: {self.db_path}")
+        with self._lock:
+            self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+            self.conn.row_factory = sqlite3.Row
+            logger.info(f"连接数据库: {self.db_path}")
 
     def disconnect(self):
         """断开数据库"""
-        if self.conn:
-            self.conn.close()
-            logger.info("断开数据库")
+        with self._lock:
+            if self.conn:
+                self.conn.close()
+                logger.info("断开数据库")
 
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
-        """执行 SQL"""
-        if not self.conn:
-            self.connect()
-        return self.conn.execute(sql, params)
+        """执行 SQL（线程安全）"""
+        with self._lock:
+            if not self.conn:
+                self.connect()
+            return self.conn.execute(sql, params)
 
     def commit(self):
         """提交事务"""
-        if self.conn:
-            self.conn.commit()
+        with self._lock:
+            if self.conn:
+                self.conn.commit()
+
+    def execute_in_transaction(self, operations: list[tuple[str, tuple]]):
+        """在单个事务中执行多个操作（原子性）
+
+        Args:
+            operations: [(sql, params), ...] 列表
+        """
+        with self._lock:
+            if not self.conn:
+                self.connect()
+            try:
+                for sql, params in operations:
+                    self.conn.execute(sql, params)
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
 
     def init_tables(self):
         """初始化表"""

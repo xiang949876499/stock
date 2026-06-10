@@ -15,16 +15,16 @@ COMMISSION_RATE = 0.0003  # 万三
 
 
 def get_current_price(symbol: str) -> float:
-    """从 akshare 获取当前价格"""
+    """从 akshare 获取当前价格（使用日线最新收盘价）"""
     import akshare as ak
 
-    # symbol format: 600519.SH -> 600519
+    # symbol format: 600519.SH -> 600519, 或直接 600519
     code = symbol.split(".")[0]
     try:
-        df = ak.stock_zh_a_spot_em()
-        row = df[df["代码"] == code]
-        if not row.empty:
-            return float(row.iloc[0]["最新价"])
+        # 使用日线接口，比全市场快照快得多
+        df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
+        if df is not None and not df.empty:
+            return float(df.iloc[-1]["收盘"])
     except Exception as e:
         logger.warning(f"获取价格失败 {symbol}: {e}")
     return 0.0

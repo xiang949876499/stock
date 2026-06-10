@@ -338,6 +338,15 @@ class SimulationEngine:
         self._update_total_assets()
         logger.info("盘中分析周期完成")
 
+    def _get_price(self, symbol: str) -> float:
+        """获取股票当前价格"""
+        try:
+            from src.execution.gateways.simulated import get_current_price
+            return get_current_price(symbol)
+        except Exception as e:
+            logger.warning(f"获取价格失败 {symbol}: {e}")
+            return 0.0
+
     def _execute_buy(self, symbol: str, name: str, result):
         """执行买入"""
         account = self._get_account()
@@ -348,8 +357,12 @@ class SimulationEngine:
             logger.info(f"资金不足，跳过买入: {symbol}")
             return
 
-        # 获取当前价格（使用评分中的数据）
-        price = 100.0  # 简化：使用固定价格，实际应从数据源获取
+        # 获取真实价格
+        price = self._get_price(symbol)
+        if price <= 0:
+            logger.warning(f"无法获取价格，跳过买入: {symbol}")
+            return
+
         volume = int(buy_amount / price / 100) * 100  # 取整到 100 股
         if volume <= 0:
             return
@@ -370,7 +383,14 @@ class SimulationEngine:
         if not pos:
             return
 
-        price = pos.get("current_price", pos.get("avg_cost", 100.0))
+        # 获取真实价格，回退到持仓成本价
+        price = self._get_price(symbol)
+        if price <= 0:
+            price = pos.get("avg_cost", 0)
+        if price <= 0:
+            logger.warning(f"无法获取价格，跳过卖出: {symbol}")
+            return
+
         volume = pos["volume"]
         actual_amount = price * volume
         commission = actual_amount * 0.0003
