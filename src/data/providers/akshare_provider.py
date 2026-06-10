@@ -1,5 +1,6 @@
 """AkShare 数据源"""
 
+import time
 from datetime import date, datetime
 from typing import Optional
 import os
@@ -17,9 +18,23 @@ from src.infra.logger import get_logger
 
 logger = get_logger("akshare")
 
+# 请求间隔控制（防止限流）
+_last_request_time = 0
+_MIN_REQUEST_INTERVAL = 0.5  # 最小间隔 500ms
+
+
+def _throttle():
+    """请求节流，防止被限流"""
+    global _last_request_time
+    now = time.time()
+    elapsed = now - _last_request_time
+    if elapsed < _MIN_REQUEST_INTERVAL:
+        time.sleep(_MIN_REQUEST_INTERVAL - elapsed)
+    _last_request_time = time.time()
+
 
 class AkShareProvider(DataProvider):
-    """AkShare 数据源"""
+    """AkShare 数据源（带重试和节流）"""
 
     async def fetch_daily(
         self,
@@ -28,17 +43,20 @@ class AkShareProvider(DataProvider):
         start_date: date,
         end_date: date
     ) -> pd.DataFrame:
-        """获取日线数据"""
-        try:
-            if market == Market.A:
-                # A股日线数据
-                df = ak.stock_zh_a_hist(
-                    symbol=symbol,
-                    period="daily",
-                    start_date=start_date.strftime("%Y%m%d"),
-                    end_date=end_date.strftime("%Y%m%d"),
-                    adjust="hfq"  # 后复权
-                )
+        """获取日线数据（带重试）"""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                _throttle()
+                if market == Market.A:
+                    # A股日线数据
+                    df = ak.stock_zh_a_hist(
+                        symbol=symbol,
+                        period="daily",
+                        start_date=start_date.strftime("%Y%m%d"),
+                        end_date=end_date.strftime("%Y%m%d"),
+                        adjust="hfq"  # 后复权
+                    )
                 # 重命名列
                 df = df.rename(columns={
                     "日期": "date",
@@ -80,8 +98,13 @@ class AkShareProvider(DataProvider):
             else:
                 raise ValueError(f"不支持的市场: {market}")
         except Exception as e:
-            logger.error(f"获取日线数据失败: {symbol}, {market}, {e}")
-            raise
+            if attempt < max_retries - 1:
+                wait = (attempt + 1) * 2  # 2s, 4s, 6s
+                logger.warning(f"获取日线数据失败，{wait}秒后重试 ({attempt+1}/{max_retries}): {symbol}, {e}")
+                time.sleep(wait)
+            else:
+                logger.error(f"获取日线数据失败: {symbol}, {market}, {e}")
+                raise
 
     async def fetch_stock_info(
         self,

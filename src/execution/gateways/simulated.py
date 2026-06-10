@@ -15,18 +15,26 @@ COMMISSION_RATE = 0.0003  # 万三
 
 
 def get_current_price(symbol: str) -> float:
-    """从 akshare 获取当前价格（使用日线最新收盘价）"""
+    """从 akshare 获取当前价格（使用日线最新收盘价，带重试）"""
+    import time
     import akshare as ak
 
     # symbol format: 600519.SH -> 600519, 或直接 600519
     code = symbol.split(".")[0]
-    try:
-        # 使用日线接口，比全市场快照快得多
-        df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
-        if df is not None and not df.empty:
-            return float(df.iloc[-1]["收盘"])
-    except Exception as e:
-        logger.warning(f"获取价格失败 {symbol}: {e}")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            # 使用日线接口，比全市场快照快得多
+            df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
+            if df is not None and not df.empty:
+                return float(df.iloc[-1]["收盘"])
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait = (attempt + 1) * 2
+                logger.warning(f"获取价格失败，{wait}秒后重试 ({attempt+1}/{max_retries}): {symbol}, {e}")
+                time.sleep(wait)
+            else:
+                logger.warning(f"获取价格失败 {symbol}: {e}")
     return 0.0
 
 
