@@ -229,7 +229,30 @@ class WestockProvider(DataProvider):
         market: Market
     ) -> FinancialData:
         """获取财务数据"""
-        raise NotImplementedError("财务数据获取未实现")
+        try:
+            # 使用已有的 fetch_finance 方法
+            result = await self.fetch_finance(symbol, market)
+
+            if "error" in result:
+                raise ValueError(result["error"])
+
+            data = result.get("data", [{}])[0] if "data" in result else result
+
+            return FinancialData(
+                symbol=symbol,
+                market=market,
+                report_date=date.today(),
+                revenue=float(data.get("revenue", data.get("totalRevenue", 0)) or 0),
+                net_profit=float(data.get("netProfit", data.get("netIncome", 0)) or 0),
+                eps=float(data.get("eps", data.get("earningsPerShare", 0)) or 0),
+                roe=float(data.get("roe", data.get("returnOnEquity", 0)) or 0),
+                pe_ratio=float(data.get("pe", data.get("peRatio", 0)) or 0),
+                pb_ratio=float(data.get("pb", data.get("pbRatio", 0)) or 0),
+            )
+
+        except Exception as e:
+            logger.error(f"获取财务数据失败: {symbol}, {market}, {e}")
+            raise
 
     async def fetch_news(
         self,
@@ -238,7 +261,37 @@ class WestockProvider(DataProvider):
         limit: int = 50
     ) -> list[NewsItem]:
         """获取新闻数据"""
-        raise NotImplementedError("新闻数据获取未实现")
+        try:
+            # 使用 akshare 获取新闻作为 fallback
+            import os
+            os.environ['NO_PROXY'] = '*'
+            import akshare as ak
+            from datetime import datetime as dt
+
+            df = ak.stock_news_em(symbol=symbol)
+
+            if df is not None and not df.empty:
+                news_list = []
+                for _, row in df.head(limit).iterrows():
+                    news_list.append(NewsItem(
+                        id=str(row.get("新闻ID", row.name)),
+                        symbol=symbol,
+                        market=market,
+                        title=str(row.get("新闻标题", "")),
+                        content=str(row.get("新闻内容", "")),
+                        source=str(row.get("文章来源", "")),
+                        url=str(row.get("新闻链接", "")),
+                        publish_time=dt.now(),
+                        sentiment="neutral",
+                        importance="P2",
+                    ))
+                return news_list
+
+            return []
+
+        except Exception as e:
+            logger.error(f"获取新闻失败: {symbol}, {market}, {e}")
+            return []
 
     async def search(self, keyword: str) -> list[dict]:
         """搜索股票"""

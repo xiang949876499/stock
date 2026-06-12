@@ -11,7 +11,7 @@ version = "0.1.0"
 description = "量化交易一体化平台"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 authors = [
     { name = "Stock Hub Team" },
 ]
@@ -30,6 +30,8 @@ dependencies = [
 
     # 数据源
     "akshare>=1.12.0",
+    "tushare>=1.4.0",
+    "yfinance>=0.2.30",
 
     # 技术指标
     "pandas-ta>=0.3.14",
@@ -74,11 +76,6 @@ backtrader = [
     "backtrader>=1.9.78",
 ]
 
-quantaxis = [
-    "quantaxis>=2.0.0.dev33",
-    "pymongo>=4.0",
-]
-
 easytrader = [
     "easytrader>=0.16",
     "pywinauto>=0.6",
@@ -116,8 +113,8 @@ filterwarnings = [
 
 [tool.black]
 line-length = 100
-target-version = ["py311"]
+target-version = ["py312"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"

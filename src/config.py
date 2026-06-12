@@ -25,8 +25,9 @@ class Settings(BaseSettings):
     ai_model: str = "gpt-4"
     ai_base_url: Optional[str] = None
 
-    # 数据源
-    data_provider: str = "akshare"  # akshare/tushare/yfinance
+    # 数据源（可选: akshare / tushare / yfinance / ashare_skill / westock）
+    # 多数据源用逗号分隔，如 "akshare,tushare,yfinance"，自动 fallback
+    data_provider: str = "akshare"
     tushare_token: Optional[str] = None
 
     # 通知

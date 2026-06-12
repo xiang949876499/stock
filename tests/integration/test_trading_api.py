@@ -47,6 +47,8 @@ def test_get_account(client):
     data = response.json()
     assert "account_id" in data
     assert "balance" in data
+    assert data["created_at"].endswith("Z")
+    assert "T" in data["created_at"]
 
 
 def test_get_positions(client):
@@ -121,3 +123,4 @@ def test_get_status(client):
     assert "account" in data
     assert "positions" in data
     assert isinstance(data["positions"], list)
+    assert data["account"]["created_at"].endswith("Z")

@@ -27,7 +27,6 @@ class SignalSource(str, Enum):
     BACKTRADER = "backtrader"
     QBOT_RL = "qbot_rl"
     AI_QUANT = "ai_quant"
-    QUANTAXIS = "quantaxis"
 
 
 class SignalV1(BaseModel):

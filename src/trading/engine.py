@@ -3,6 +3,7 @@
 协调 analysis -> signal -> execution -> recording 流程。
 """
 
+import asyncio
 import json
 import uuid
 from datetime import date, datetime
@@ -28,6 +29,7 @@ class SimulationEngine:
         self.strategy_selector = StrategySelector()
         self.mistake_analyzer = MistakeAnalyzer()
         self._rules_service = None
+        self._analysis_lock = asyncio.Lock()
         self._init_account()
 
     def _get_rules_service(self):
@@ -114,6 +116,19 @@ class SimulationEngine:
             (log_id, self.account_id, symbol, strategy, score, signal, trend, reason, action_taken, action_reason, rule_checks_json),
         )
         self.db.commit()
+
+    def _record_system_operation(self, action_taken: str, action_reason: str):
+        """将引擎操作写入分析日志，供交易页面直接查看。"""
+        self._record_analysis_log(
+            symbol="SYSTEM",
+            strategy="system",
+            score=0,
+            signal="info",
+            trend="neutral",
+            reason="模拟交易系统操作",
+            action_taken=action_taken,
+            action_reason=action_reason,
+        )
 
     def _record_trade(
         self,
@@ -237,12 +252,24 @@ class SimulationEngine:
 
     def start(self):
         """启动引擎"""
+        if self._running:
+            return
         self._running = True
+        self._record_system_operation(
+            action_taken="executed",
+            action_reason="模拟交易引擎已启动，等待定时或手动分析",
+        )
         logger.info("模拟交易引擎启动")
 
     def stop(self):
         """停止引擎"""
+        if not self._running:
+            return
         self._running = False
+        self._record_system_operation(
+            action_taken="executed",
+            action_reason="模拟交易引擎已停止",
+        )
         logger.info("模拟交易引擎停止")
 
     def is_running(self) -> bool:
@@ -295,6 +322,93 @@ class SimulationEngine:
             logger.warning(f"准则检查失败: {e}")
             return []
 
+    async def _get_technical_detail(self, symbol: str) -> dict:
+        """获取股票技术指标详情，用于构建分析理由"""
+        try:
+            from src.data.service import DataService
+            from src.data.models import Market
+            from src.plugins.financial_analysis.technical_indicators import (
+                calc_ma, calc_macd, calc_rsi, calc_volume_analysis,
+            )
+
+            data_service = DataService()
+            market = Market.A  # 目前主要支持 A 股
+
+            from datetime import date, timedelta
+            end_date = date.today()
+            start_date = end_date - timedelta(days=120)
+
+            df = await data_service.get_daily(symbol, market, start_date, end_date)
+            if df is None or df.empty:
+                return {}
+
+            closes = df["close"].tolist()
+            volumes = df["volume"].tolist()
+
+            ma_data = calc_ma(closes, [5, 10, 20, 60])
+            macd_raw = calc_macd(closes)
+            rsi_raw = calc_rsi(closes, [6, 12, 24])
+            vol_raw = calc_volume_analysis(volumes, closes)
+
+            # 映射为 _build_detailed_reason 期望的 key 格式
+            macd_data = {
+                "macd": macd_raw.get("macd", 0),
+                "macd_signal": macd_raw.get("dif", 0),
+            }
+            rsi_data = {
+                "rsi_6": rsi_raw.get("rsi6", 50),
+            }
+            vol_data = {
+                "volume_ratio": vol_raw.get("volume_ratio_5", 1),
+            }
+
+            return {
+                "ma": ma_data,
+                "macd": macd_data,
+                "rsi": rsi_data,
+                "volume": vol_data,
+            }
+        except Exception as e:
+            logger.warning(f"获取技术指标详情失败: {symbol}, {e}")
+            return {}
+
+    async def _fetch_news(self, symbol: str, limit: int = 5) -> list[dict]:
+        """获取股票相关新闻
+
+        Args:
+            symbol: 股票代码
+            limit: 获取新闻数量，默认 5 条
+
+        Returns:
+            [{"title": "...", "summary": "...", "sentiment": "positive/negative/neutral"}, ...]
+        """
+        try:
+            from src.data.service import DataService
+            from src.data.models import Market
+
+            data_service = DataService()
+            market = Market.A
+
+            news_list = await data_service.get_news(symbol, market, limit=limit)
+            if not news_list:
+                return []
+
+            result = []
+            for news in news_list:
+                result.append({
+                    "title": news.title,
+                    "summary": news.summary[:200] if news.summary else "",
+                    "sentiment": getattr(news, "sentiment", "neutral"),
+                    "publish_time": str(news.publish_time) if news.publish_time else "",
+                })
+
+            logger.info(f"获取新闻: {symbol}, {len(result)} 条")
+            return result
+
+        except Exception as e:
+            logger.warning(f"获取新闻失败: {symbol}, {e}")
+            return []
+
     async def _fetch_indicators(self, stock: dict) -> Optional[dict]:
         """获取股票技术指标，转换为准则检查器所需的格式"""
         try:
@@ -326,6 +440,19 @@ class SimulationEngine:
     # ── 分析周期 ────────────────────────────────────────────────────
 
     async def run_analysis_cycle(self):
+        """串行执行分析周期，避免手动任务与调度任务重叠。"""
+        if self._analysis_lock.locked():
+            message = "已有分析周期正在运行，本次请求已跳过"
+            self._record_system_operation(
+                action_taken="skipped",
+                action_reason=message,
+            )
+            return {"status": "skipped", "message": message}
+
+        async with self._analysis_lock:
+            return await self._run_analysis_cycle_impl()
+
+    async def _run_analysis_cycle_impl(self):
         """执行一次盘中分析周期
 
         1. 获取推荐股票
@@ -333,18 +460,43 @@ class SimulationEngine:
         3. 记录分析日志
         """
         logger.info("开始盘中分析周期")
+        self._record_system_operation(
+            action_taken="executed",
+            action_reason="开始盘中分析周期，正在筛选候选股票",
+        )
 
         # 获取推荐股票
         try:
             from src.analysis.strategies.stock_picker import get_stock_recommendations
-            recommendations = await get_stock_recommendations("A", 10)
+            recommendations = await get_stock_recommendations(
+                "A",
+                10,
+                use_ai_screen=False,
+                progress_callback=lambda message: self._record_system_operation(
+                    action_taken="executed",
+                    action_reason=message,
+                ),
+            )
         except Exception as e:
             logger.warning(f"获取推荐失败: {e}")
+            self._record_system_operation(
+                action_taken="skipped",
+                action_reason=f"候选股票筛选失败：{e}",
+            )
             recommendations = []
 
         if not recommendations:
             logger.info("无推荐股票，跳过分析")
-            return
+            self._record_system_operation(
+                action_taken="skipped",
+                action_reason="本轮未产生推荐股票，未执行买卖操作",
+            )
+            return {"status": "completed", "recommendations": 0, "trades": 0}
+
+        self._record_system_operation(
+            action_taken="executed",
+            action_reason=f"候选筛选完成，共 {len(recommendations)} 只，开始逐只 AI 决策",
+        )
 
         # 获取 AI 适配器
         ai_adapter = None
@@ -366,7 +518,20 @@ class SimulationEngine:
                 if ai_adapter:
                     from src.analysis.service import AnalysisService
                     service = AnalysisService(ai_adapter)
-                    result = await service.analyze_stock(symbol, strategy)
+
+                    # 获取新闻（用于 AI 分析上下文和分析理由）
+                    news_list = await self._fetch_news(symbol, limit=5)
+
+                    # 将新闻作为上下文传入 AI 分析
+                    news_context = None
+                    if news_list:
+                        news_summary = "\n".join([
+                            f"- [{n.get('sentiment', 'neutral')}] {n.get('title', '')}"
+                            for n in news_list[:3]
+                        ])
+                        news_context = {"recent_news": news_summary}
+
+                    result = await service.analyze_stock(symbol, strategy, context=news_context)
 
                     # 获取技术指标详情
                     tech_detail = await self._get_technical_detail(symbol)
@@ -374,20 +539,28 @@ class SimulationEngine:
                     # 运行准则检查
                     rule_checks = await self._check_rules(stock, result.signal)
 
-                    # 生成详细分析理由
+                    # 生成详细分析理由（包含新闻）
                     detailed_reason = self._build_detailed_reason(
-                        result, tech_detail, rule_checks, stock
+                        result, tech_detail, rule_checks, stock, news_list
                     )
 
                     # 判断执行状态
                     if result.signal == "buy" and result.score >= 55:
-                        action_taken = "executed"
-                        action_reason = f"✅ 买入执行 | 评分 {result.score} ≥ 55 | {detailed_reason}"
-                        self._execute_buy(symbol, name, result)
+                        executed, execution_reason = self._execute_buy(symbol, name, result)
+                        action_taken = "executed" if executed else "skipped"
+                        action_reason = (
+                            f"买入执行 | 评分 {result.score} >= 55 | {detailed_reason}"
+                            if executed
+                            else f"买入未执行：{execution_reason} | {detailed_reason}"
+                        )
                     elif result.signal == "sell" and result.score <= 45:
-                        action_taken = "executed"
-                        action_reason = f"✅ 卖出执行 | 评分 {result.score} ≤ 45 | {detailed_reason}"
-                        self._execute_sell(symbol, name, result)
+                        executed, execution_reason = self._execute_sell(symbol, name, result)
+                        action_taken = "executed" if executed else "skipped"
+                        action_reason = (
+                            f"卖出执行 | 评分 {result.score} <= 45 | {detailed_reason}"
+                            if executed
+                            else f"卖出未执行：{execution_reason} | {detailed_reason}"
+                        )
                     elif result.signal == "buy":
                         action_taken = "skipped"
                         action_reason = f"⚠️ 买入信号但评分不足 ({result.score} < 55) | {detailed_reason}"
@@ -440,10 +613,23 @@ class SimulationEngine:
 
         # 更新总资产
         self._update_total_assets()
+        trade_count = len(self._get_trades(date.today().isoformat()))
+        self._record_system_operation(
+            action_taken="executed",
+            action_reason=(
+                f"盘中分析周期完成：分析 {len(recommendations)} 只候选股，"
+                f"今日累计成交 {trade_count} 笔"
+            ),
+        )
         logger.info("盘中分析周期完成")
+        return {
+            "status": "completed",
+            "recommendations": len(recommendations),
+            "trades": trade_count,
+        }
 
     def _build_detailed_reason(
-        self, result, tech_detail: dict, rule_checks: list, stock: dict
+        self, result, tech_detail: dict, rule_checks: list, stock: dict, news_list: list = None
     ) -> str:
         """构建详细的分析理由"""
         parts = []
@@ -490,7 +676,28 @@ class SimulationEngine:
             if highlights:
                 parts.append(f"技术面: {', '.join(highlights)}")
 
-        # 3. 准则检查结果
+        # 3. 新闻舆情
+        if news_list:
+            news_highlights = []
+            positive_count = sum(1 for n in news_list if n.get("sentiment") == "positive")
+            negative_count = sum(1 for n in news_list if n.get("sentiment") == "negative")
+
+            if positive_count > negative_count:
+                news_highlights.append(f"舆情偏正面({positive_count}条)")
+            elif negative_count > positive_count:
+                news_highlights.append(f"舆情偏负面({negative_count}条)")
+
+            # 取最新一条新闻标题
+            if news_list:
+                latest_title = news_list[0].get("title", "")
+                if latest_title:
+                    title_brief = latest_title[:30] + "..." if len(latest_title) > 30 else latest_title
+                    news_highlights.append(f"最新: {title_brief}")
+
+            if news_highlights:
+                parts.append(f"舆情: {', '.join(news_highlights)}")
+
+        # 4. 准则检查结果
         if rule_checks:
             passed = [r for r in rule_checks if r.get("passed")]
             failed = [r for r in rule_checks if not r.get("passed")]
@@ -512,13 +719,13 @@ class SimulationEngine:
             logger.warning(f"获取价格失败 {symbol}: {e}")
             return 0.0
 
-    def _execute_buy(self, symbol: str, name: str, result):
+    def _execute_buy(self, symbol: str, name: str, result) -> tuple[bool, str]:
         """执行买入"""
         # 检查是否已持有
         positions = self._get_positions()
         if any(p["symbol"] == symbol for p in positions):
             logger.info(f"已持有 {symbol}，跳过买入")
-            return
+            return False, "当前账户已持有该股票"
 
         account = self._get_account()
         balance = account["balance"]
@@ -534,17 +741,17 @@ class SimulationEngine:
         buy_amount = balance * alloc_pct
         if buy_amount < 1000:
             logger.info(f"资金不足，跳过买入: {symbol}")
-            return
+            return False, "可用资金不足"
 
         # 获取真实价格
         price = self._get_price(symbol)
         if price <= 0:
             logger.warning(f"无法获取价格，跳过买入: {symbol}")
-            return
+            return False, "无法获取价格"
 
         volume = int(buy_amount / price / 100) * 100  # 取整到 100 股
         if volume <= 0:
-            return
+            return False, "可用资金不足以买入 100 股"
 
         actual_amount = price * volume
         commission = actual_amount * 0.0003
@@ -554,13 +761,14 @@ class SimulationEngine:
         self._record_trade(symbol, name, "BUY", price, volume, actual_amount, commission,
                            strategy=result.signal, signal_score=result.score, signal_reason=result.reason)
         logger.info(f"模拟买入: {symbol} {volume}股 @ {price}")
+        return True, f"成交 {volume} 股，价格 {price}"
 
-    def _execute_sell(self, symbol: str, name: str, result):
+    def _execute_sell(self, symbol: str, name: str, result) -> tuple[bool, str]:
         """执行卖出"""
         positions = self._get_positions()
         pos = next((p for p in positions if p["symbol"] == symbol), None)
         if not pos:
-            return
+            return False, "当前账户没有该股票持仓"
 
         # 获取真实价格，回退到持仓成本价
         price = self._get_price(symbol)
@@ -568,7 +776,7 @@ class SimulationEngine:
             price = pos.get("avg_cost", 0)
         if price <= 0:
             logger.warning(f"无法获取价格，跳过卖出: {symbol}")
-            return
+            return False, "无法获取价格"
 
         volume = pos["volume"]
         actual_amount = price * volume
@@ -579,3 +787,4 @@ class SimulationEngine:
         self._record_trade(symbol, name, "SELL", price, volume, actual_amount, commission,
                            strategy=result.signal, signal_score=result.score, signal_reason=result.reason)
         logger.info(f"模拟卖出: {symbol} {volume}股 @ {price}")
+        return True, f"成交 {volume} 股，价格 {price}"

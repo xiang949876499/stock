@@ -22,10 +22,17 @@ class AnalysisService:
     async def analyze_stock(
         self,
         symbol: str,
-        strategy_name: str = "comprehensive"
+        strategy_name: str = "comprehensive",
+        context: dict = None,
     ) -> AnalysisResult:
-        """分析股票"""
-        return await self.stock_agent.analyze_with_strategy(symbol, strategy_name)
+        """分析股票
+
+        Args:
+            symbol: 股票代码
+            strategy_name: 策略名称
+            context: 额外上下文（如 recent_news）
+        """
+        return await self.stock_agent.analyze_with_strategy(symbol, strategy_name, context)
 
     async def chat(
         self,

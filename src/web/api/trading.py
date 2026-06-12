@@ -19,6 +19,7 @@ _db: Optional[Database] = None
 _engine: Optional[SimulationEngine] = None
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_SQLITE_UTC_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$")
 
 
 def _get_db() -> Database:
@@ -47,6 +48,17 @@ def _validate_date(date: str) -> str:
     return date
 
 
+def _serialize_timestamps(value):
+    """将 SQLite UTC 时间标记为 ISO 8601，避免浏览器按本地时间误读。"""
+    if isinstance(value, dict):
+        return {key: _serialize_timestamps(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_serialize_timestamps(item) for item in value]
+    if isinstance(value, str) and _SQLITE_UTC_PATTERN.fullmatch(value):
+        return value.replace(" ", "T", 1) + "Z"
+    return value
+
+
 # ── 请求模型 ────────────────────────────────────────────────────
 
 
@@ -62,7 +74,7 @@ class ResetRequest(BaseModel):
 async def get_account(engine: SimulationEngine = Depends(get_engine)):
     """获取模拟账户信息"""
     try:
-        return engine._get_account()
+        return _serialize_timestamps(engine._get_account())
     except Exception as e:
         logger.error(f"获取账户失败: {e}")
         raise HTTPException(500, "获取账户失败")
@@ -92,7 +104,7 @@ async def reset_account(
         ])
         logger.info(f"重置模拟账户 {account_id}，初始资金 {request.initial_capital}")
 
-        return engine._get_account()
+        return _serialize_timestamps(engine._get_account())
     except Exception as e:
         logger.error(f"重置账户失败: {e}")
         raise HTTPException(500, "重置账户失败")
@@ -105,7 +117,7 @@ async def reset_account(
 async def get_positions(engine: SimulationEngine = Depends(get_engine)):
     """获取当前持仓"""
     try:
-        return engine._get_positions()
+        return _serialize_timestamps(engine._get_positions())
     except Exception as e:
         logger.error(f"获取持仓失败: {e}")
         raise HTTPException(500, "获取持仓失败")
@@ -123,7 +135,7 @@ async def get_trades(
     try:
         if date:
             _validate_date(date)
-        return engine._get_trades(trade_date=date)
+        return _serialize_timestamps(engine._get_trades(trade_date=date))
     except HTTPException:
         raise
     except Exception as e:
@@ -142,7 +154,7 @@ async def get_reports(engine: SimulationEngine = Depends(get_engine)):
             "SELECT * FROM sim_daily_reports WHERE account_id = ? ORDER BY report_date DESC",
             (engine.account_id,),
         ).fetchall()
-        return [dict(r) for r in rows]
+        return _serialize_timestamps([dict(r) for r in rows])
     except Exception as e:
         logger.error(f"获取报告列表失败: {e}")
         raise HTTPException(500, "获取报告列表失败")
@@ -159,7 +171,7 @@ async def get_report(date: str, engine: SimulationEngine = Depends(get_engine)):
         ).fetchone()
         if not row:
             raise HTTPException(404, f"未找到 {date} 的报告")
-        return dict(row)
+        return _serialize_timestamps(dict(row))
     except HTTPException:
         raise
     except Exception as e:
@@ -207,7 +219,7 @@ async def get_analysis_logs(
                 "SELECT * FROM sim_analysis_logs WHERE account_id = ? ORDER BY created_at",
                 (engine.account_id,),
             ).fetchall()
-        return [dict(r) for r in rows]
+        return _serialize_timestamps([dict(r) for r in rows])
     except HTTPException:
         raise
     except Exception as e:
@@ -233,8 +245,10 @@ async def start_trading(engine: SimulationEngine = Depends(get_engine)):
 async def run_analysis(engine: SimulationEngine = Depends(get_engine)):
     """手动触发一次分析"""
     try:
-        await engine.run_analysis_cycle()
-        return {"status": "completed", "message": "分析完成"}
+        result = await engine.run_analysis_cycle()
+        if result and result.get("status") == "skipped":
+            return result
+        return {"status": "completed", "message": "分析完成", **(result or {})}
     except Exception as e:
         logger.error(f"分析失败: {e}")
         raise HTTPException(500, "分析失败")
@@ -255,7 +269,7 @@ async def stop_trading(engine: SimulationEngine = Depends(get_engine)):
 async def get_status(engine: SimulationEngine = Depends(get_engine)):
     """获取引擎运行状态"""
     try:
-        return engine.get_status()
+        return _serialize_timestamps(engine.get_status())
     except Exception as e:
         logger.error(f"获取状态失败: {e}")
         raise HTTPException(500, "获取状态失败")

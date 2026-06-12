@@ -50,10 +50,12 @@ class ParquetStorage:
         df = pd.read_parquet(file_path)
 
         # 过滤日期
+        date_values = pd.to_datetime(df["date"], errors="coerce")
         if start_date:
-            df = df[df["date"] >= start_date]
+            df = df[date_values >= pd.Timestamp(start_date)]
+            date_values = date_values.loc[df.index]
         if end_date:
-            df = df[df["date"] <= end_date]
+            df = df[date_values <= pd.Timestamp(end_date)]
 
         return df
 

@@ -6,6 +6,7 @@ from .tushare_provider import TushareProvider
 from .yfinance_provider import YFinanceProvider
 from .ashare_skill_provider import AShareSkillProvider
 from .westock_provider import WestockProvider
+from .composite import CompositeProvider
 
 __all__ = [
     "DataProvider",
@@ -14,4 +15,5 @@ __all__ = [
     "YFinanceProvider",
     "AShareSkillProvider",
     "WestockProvider",
+    "CompositeProvider",
 ]

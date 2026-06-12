@@ -7,6 +7,7 @@ import pandas as pd
 from src.data.models import Market, StockInfo, FinancialData, NewsItem, TechnicalIndicators
 from src.data.providers.base import DataProvider
 from src.data.providers.akshare_provider import AkShareProvider
+from src.data.providers.composite import CompositeProvider
 from src.data.catalog.manager import InstrumentCatalog
 from src.data.storage.parquet import ParquetStorage
 from src.data.sync.manager import DataSyncManager
@@ -14,6 +15,55 @@ from src.infra.cache import LRUCache
 from src.infra.logger import get_logger
 
 logger = get_logger("data_service")
+
+# 数据源名称 → 类映射
+_PROVIDER_MAP = {
+    "akshare": "AkShareProvider",
+    "tushare": "TushareProvider",
+    "yfinance": "YFinanceProvider",
+    "ashare_skill": "AShareSkillProvider",
+    "westock": "WestockProvider",
+}
+
+
+def _create_provider(name: str) -> DataProvider:
+    """根据名称创建数据源实例"""
+    name = name.strip().lower()
+    if name == "akshare":
+        from src.data.providers.akshare_provider import AkShareProvider
+        return AkShareProvider()
+    elif name == "tushare":
+        from src.data.providers.tushare_provider import TushareProvider
+        from src.config import get_settings
+        token = get_settings().tushare_token or ""
+        return TushareProvider(token=token)
+    elif name == "yfinance":
+        from src.data.providers.yfinance_provider import YFinanceProvider
+        return YFinanceProvider()
+    elif name == "ashare_skill":
+        from src.data.providers.ashare_skill_provider import AShareSkillProvider
+        return AShareSkillProvider()
+    elif name == "westock":
+        from src.data.providers.westock_provider import WestockProvider
+        return WestockProvider()
+    else:
+        raise ValueError(f"未知数据源: {name}，可选: {', '.join(_PROVIDER_MAP.keys())}")
+
+
+def create_provider(provider_str: str) -> DataProvider:
+    """从配置字符串创建数据源（支持逗号分隔的多数据源）"""
+    names = [n.strip() for n in provider_str.split(",") if n.strip()]
+
+    if not names:
+        logger.warning("未指定数据源，使用默认 AkShare")
+        return AkShareProvider()
+
+    if len(names) == 1:
+        return _create_provider(names[0])
+
+    # 多数据源 → CompositeProvider
+    providers = [_create_provider(name) for name in names]
+    return CompositeProvider(providers)
 
 
 class DataService:
@@ -24,9 +74,23 @@ class DataService:
         provider: Optional[DataProvider] = None,
         catalog: Optional[InstrumentCatalog] = None,
         storage: Optional[ParquetStorage] = None,
+        provider_str: Optional[str] = None,
     ):
-        """初始化数据服务"""
-        self.provider = provider or AkShareProvider()
+        """初始化数据服务
+
+        Args:
+            provider: 直接传入的数据源实例
+            provider_str: 数据源配置字符串，如 "akshare" 或 "akshare,tushare,yfinance"
+        """
+        if provider:
+            self.provider = provider
+        elif provider_str:
+            self.provider = create_provider(provider_str)
+        else:
+            from src.config import get_settings
+            settings = get_settings()
+            self.provider = create_provider(settings.data_provider)
+
         self.catalog = catalog or InstrumentCatalog()
         self.storage = storage or ParquetStorage()
         self.sync_manager = DataSyncManager(self.provider, self.storage)

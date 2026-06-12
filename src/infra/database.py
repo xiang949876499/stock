@@ -178,9 +178,16 @@ class Database:
                 reason TEXT,
                 action_taken TEXT,
                 action_reason TEXT,
+                rule_checks TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        # 兼容旧表：添加 rule_checks 列（已存在则忽略）
+        try:
+            self.execute("ALTER TABLE sim_analysis_logs ADD COLUMN rule_checks TEXT")
+        except sqlite3.OperationalError:
+            pass  # 列已存在
 
         self.commit()
         logger.info("初始化模拟交易表")

@@ -1,7 +1,10 @@
 """SimulationEngine tests"""
 
+import asyncio
+
 import pytest
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 from src.trading.engine import SimulationEngine
 from src.infra.database import Database
@@ -138,6 +141,21 @@ class TestRecordTrade:
         ids = [r["trade_id"] for r in rows]
         assert len(ids) == 2
         assert ids[0] != ids[1]
+
+
+class TestTradeExecutionResult:
+    def test_buy_reports_missing_price_instead_of_claiming_execution(
+        self, engine, monkeypatch
+    ):
+        """A buy signal is not a trade when no executable price is available."""
+        result = SimpleNamespace(signal="buy", score=80, reason="test")
+        monkeypatch.setattr(engine, "_get_price", lambda symbol: 0.0)
+
+        executed, reason = engine._execute_buy("600519", "贵州茅台", result)
+
+        assert executed is False
+        assert "无法获取价格" in reason
+        assert engine._get_trades() == []
 
 
 # ── _update_position ───────────────────────────────────────────────
@@ -315,10 +333,17 @@ class TestStartStop:
         """Engine should not be running initially."""
         assert engine.is_running() is False
 
-    def test_start_sets_running(self, engine):
-        """start() should set _running to True."""
+    def test_start_sets_running_and_records_operation(self, engine, db):
+        """start() should set _running and leave a visible operation log."""
         engine.start()
         assert engine.is_running() is True
+        row = db.execute(
+            "SELECT * FROM sim_analysis_logs WHERE account_id = ?",
+            ("sim_001",),
+        ).fetchone()
+        assert row["symbol"] == "SYSTEM"
+        assert row["action_taken"] == "executed"
+        assert "引擎已启动" in row["action_reason"]
 
     def test_stop_clears_running(self, engine):
         """stop() should set _running to False."""
@@ -334,6 +359,59 @@ class TestStartStop:
         engine.stop()
         engine.stop()
         assert engine.is_running() is False
+
+
+@pytest.mark.asyncio
+async def test_analysis_cycle_records_empty_recommendation_operation(
+    engine, db, monkeypatch
+):
+    """An empty recommendation cycle should still be visible in analysis logs."""
+    from src.analysis.strategies import stock_picker
+
+    async def fake_recommendations(market, top_n, **kwargs):
+        assert market == "A"
+        assert top_n == 10
+        assert kwargs["use_ai_screen"] is False
+        kwargs["progress_callback"]("技术快筛进度：已检查 1000/4970 只")
+        return []
+
+    monkeypatch.setattr(stock_picker, "get_stock_recommendations", fake_recommendations)
+
+    await engine.run_analysis_cycle()
+
+    rows = db.execute(
+        "SELECT * FROM sim_analysis_logs WHERE account_id = ? ORDER BY rowid",
+        ("sim_001",),
+    ).fetchall()
+    assert len(rows) == 3
+    assert rows[0]["symbol"] == "SYSTEM"
+    assert "开始盘中分析周期" in rows[0]["action_reason"]
+    assert "已检查 1000/4970" in rows[1]["action_reason"]
+    assert rows[2]["action_taken"] == "skipped"
+    assert "未产生推荐股票" in rows[2]["action_reason"]
+
+
+@pytest.mark.asyncio
+async def test_analysis_cycle_rejects_overlapping_run(engine, monkeypatch):
+    """Manual and scheduled analysis must not run at the same time."""
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_cycle():
+        started.set()
+        await release.wait()
+        return {"status": "completed"}
+
+    monkeypatch.setattr(engine, "_run_analysis_cycle_impl", slow_cycle)
+
+    first = asyncio.create_task(engine.run_analysis_cycle())
+    await started.wait()
+    second_result = await engine.run_analysis_cycle()
+    release.set()
+    await first
+
+    assert second_result["status"] == "skipped"
+    assert "已有分析周期" in second_result["message"]
 
 
 # ── get_status ─────────────────────────────────────────────────────

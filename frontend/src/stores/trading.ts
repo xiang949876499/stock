@@ -58,6 +58,14 @@ export interface TradingReport {
   strategy_adjustments: string
 }
 
+export interface RuleCheck {
+  rule_id: string
+  rule_title: string
+  passed: boolean
+  score: number
+  reason: string
+}
+
 export interface AnalysisLog {
   log_id: string
   account_id: string
@@ -69,6 +77,7 @@ export interface AnalysisLog {
   reason: string
   action_taken: string
   action_reason: string
+  rule_checks: string | null  // JSON string of RuleCheck[]
   created_at: string
 }
 

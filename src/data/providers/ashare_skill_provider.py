@@ -187,8 +187,33 @@ class AShareSkillProvider(DataProvider):
         market: Market
     ) -> FinancialData:
         """获取财务数据"""
-        # TODO: 实现财务数据获取
-        raise NotImplementedError("财务数据获取未实现")
+        try:
+            # 使用 akshare 获取财务指标作为 fallback
+            import os
+            os.environ['NO_PROXY'] = '*'
+            import akshare as ak
+
+            df = ak.stock_financial_analysis_indicator(symbol=symbol)
+
+            if df is not None and not df.empty:
+                latest = df.iloc[0]
+                return FinancialData(
+                    symbol=symbol,
+                    market=market,
+                    report_date=date.today(),
+                    revenue=float(latest.get("主营业务收入(万元)", 0) or 0) * 10000,
+                    net_profit=float(latest.get("净利润(万元)", 0) or 0) * 10000,
+                    eps=float(latest.get("每股收益(元)", 0) or 0),
+                    roe=float(latest.get("净资产收益率(%)", 0) or 0),
+                    pe_ratio=0.0,
+                    pb_ratio=0.0,
+                )
+
+            raise ValueError(f"无财务数据: {symbol}")
+
+        except Exception as e:
+            logger.error(f"获取财务数据失败: {symbol}, {market}, {e}")
+            raise
 
     async def fetch_news(
         self,
@@ -197,8 +222,37 @@ class AShareSkillProvider(DataProvider):
         limit: int = 50
     ) -> list[NewsItem]:
         """获取新闻数据"""
-        # TODO: 实现新闻数据获取
-        raise NotImplementedError("新闻数据获取未实现")
+        try:
+            # 使用 akshare 获取新闻作为 fallback
+            import os
+            os.environ['NO_PROXY'] = '*'
+            import akshare as ak
+
+            df = ak.stock_news_em(symbol=symbol)
+
+            if df is not None and not df.empty:
+                from datetime import datetime as dt
+                news_list = []
+                for _, row in df.head(limit).iterrows():
+                    news_list.append(NewsItem(
+                        id=str(row.get("新闻ID", row.name)),
+                        symbol=symbol,
+                        market=market,
+                        title=str(row.get("新闻标题", "")),
+                        content=str(row.get("新闻内容", "")),
+                        source=str(row.get("文章来源", "")),
+                        url=str(row.get("新闻链接", "")),
+                        publish_time=dt.now(),
+                        sentiment="neutral",
+                        importance="P2",
+                    ))
+                return news_list
+
+            return []
+
+        except Exception as e:
+            logger.error(f"获取新闻失败: {symbol}, {market}, {e}")
+            return []
 
     def _normalize_columns(self, df: pd.DataFrame) -> pd.DataFrame:
         """统一列名"""

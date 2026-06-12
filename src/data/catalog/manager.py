@@ -1,5 +1,6 @@
 """标的目录管理器"""
 
+import time
 from pathlib import Path
 from typing import Optional
 import json
@@ -139,3 +140,74 @@ class InstrumentCatalog:
         if symbol in self.mapping:
             del self.mapping[symbol]
             logger.info(f"删除标的: {symbol}")
+
+    def needs_refresh(self, max_age_hours: int = 24) -> bool:
+        """检查目录是否需要刷新
+
+        Args:
+            max_age_hours: 最大有效时间（小时），默认 24 小时
+        """
+        meta_file = self.catalog_path / "catalog_meta.json"
+        if not meta_file.exists():
+            return True
+
+        try:
+            with open(meta_file, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            last_refresh = meta.get("last_refresh", 0)
+            return (time.time() - last_refresh) > max_age_hours * 3600
+        except Exception:
+            return True
+
+    async def refresh_from_provider(self, provider):
+        """从数据源刷新全量股票目录
+
+        Args:
+            provider: AkShareProvider 实例
+        """
+        logger.info("开始刷新股票目录...")
+
+        # 获取全量股票列表
+        a_stocks = await provider.fetch_stock_list_a()
+        hk_stocks = await provider.fetch_stock_list_hk()
+
+        if not a_stocks and not hk_stocks:
+            logger.warning("未获取到任何股票数据，跳过刷新")
+            return
+
+        # 构建新映射，保留已有的元数据
+        new_mapping = {}
+        for stock in a_stocks + hk_stocks:
+            symbol = stock["symbol"]
+            # 保留已有的 lot_size 等元数据
+            existing = self.mapping.get(symbol, {})
+            new_mapping[symbol] = {
+                "vt_symbol": existing.get("vt_symbol", self._make_vt_symbol(symbol, stock["market"])),
+                "name": stock["name"],
+                "market": stock["market"],
+                "lot_size": existing.get("lot_size", 100),
+            }
+
+        self.mapping = new_mapping
+
+        # 保存目录
+        self.save_catalog()
+
+        # 保存刷新时间元数据
+        meta_file = self.catalog_path / "catalog_meta.json"
+        with open(meta_file, "w", encoding="utf-8") as f:
+            json.dump({"last_refresh": time.time(), "count": len(self.mapping)}, f)
+
+        logger.info(f"股票目录刷新完成: {len(self.mapping)} 只股票")
+
+    def _make_vt_symbol(self, symbol: str, market: str) -> str:
+        """生成 vt_symbol"""
+        if market == "A":
+            if symbol.startswith("6"):
+                return f"{symbol}.SSE"
+            else:
+                return f"{symbol}.SZE"
+        elif market == "HK":
+            return f"{symbol}.HK"
+        else:
+            return f"{symbol}.UNKNOWN"

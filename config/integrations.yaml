@@ -3,10 +3,6 @@ integrations:
     enabled: true
     strategies_path: "./strategies/backtrader"
 
-  quantaxis:
-    enabled: true
-    mongodb_uri: "mongodb://localhost:27017"
-
   easytrader:
     enabled: true
     broker: "ths"

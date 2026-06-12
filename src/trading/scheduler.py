@@ -5,8 +5,11 @@
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from pytz import timezone as tz
 
 from src.infra.logger import get_logger
+
+CST = tz("Asia/Shanghai")
 
 logger = get_logger("trading_scheduler")
 
@@ -22,7 +25,7 @@ class TradingScheduler:
     """
 
     def __init__(self):
-        self.scheduler = AsyncIOScheduler()
+        self.scheduler = AsyncIOScheduler(timezone=CST)
         self.engine = None
 
     def setup(self, engine):

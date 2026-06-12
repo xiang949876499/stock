@@ -62,9 +62,14 @@ def test_get_last_date(storage, sample_df):
 def test_load_with_date_filter(storage, sample_df):
     """测试带日期过滤的加载"""
     storage.save_daily(sample_df, "600519", Market.A)
-    loaded = storage.load_daily("600519", Market.A)
+    loaded = storage.load_daily(
+        "600519",
+        Market.A,
+        start_date="2026-01-02",
+        end_date="2026-01-03",
+    )
     assert loaded is not None
-    assert len(loaded) == 3
+    assert loaded["date"].tolist() == [date(2026, 1, 2), date(2026, 1, 3)]
 
 
 def test_delete(storage, sample_df):

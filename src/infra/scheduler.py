@@ -2,7 +2,10 @@
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from pytz import timezone as tz
 from src.infra.logger import get_logger
+
+CST = tz("Asia/Shanghai")
 
 logger = get_logger("scheduler")
 
@@ -11,7 +14,7 @@ class TaskScheduler:
     """任务调度器"""
 
     def __init__(self):
-        self.scheduler = AsyncIOScheduler()
+        self.scheduler = AsyncIOScheduler(timezone=CST)
 
     def setup(self):
         """设置定时任务"""
