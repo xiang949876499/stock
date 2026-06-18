@@ -72,3 +72,22 @@ ruff check src tests
 ## License
 
 MIT
+
+## TradingAgents
+
+Optional multi-agent stock analysis is available through the `tradingagents` strategy. See `docs/tradingagents.md` for install, configuration, and API usage.
+
+Simulated trading can also use optional Kronos forecast summaries during the daily optimization step. Install the `kronos` extra and keep `../Kronos` available when enabling real model inference; see `docs/tradingagents.md` for the candidate snapshot format and runtime knobs.
+
+## Docker
+
+Build and run the API container:
+
+```bash
+docker build -t stock-hub:latest .
+docker compose up -d
+```
+
+The API is exposed on `http://localhost:8080`, and the frontend is exposed on `http://localhost:3000`.
+
+The compose file maps `./data` to `/app/data`, so daily simulation optimization reports are saved on the host under `data/simulation_reviews/YYYY-MM-DD/`.

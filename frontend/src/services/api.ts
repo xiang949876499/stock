@@ -46,6 +46,9 @@ export const signalApi = {
   list: (symbol?: string, status?: string) =>
     api.get<Signal[]>('/signals', { params: { symbol, status } }),
 
+  create: (targets: Record<string, number>, source: string = 'manual') =>
+    api.post<Signal>('/signals/', { targets, source }),
+
   approve: (signalId: string) =>
     api.post(`/signals/${signalId}/approve`),
 

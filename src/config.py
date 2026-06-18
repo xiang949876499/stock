@@ -3,12 +3,17 @@
 from pathlib import Path
 from typing import Optional
 import yaml
-from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """应用配置"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # 应用
     app_name: str = "Stock Hub"
@@ -30,6 +35,15 @@ class Settings(BaseSettings):
     data_provider: str = "akshare"
     tushare_token: Optional[str] = None
 
+    # Kronos 模拟交易预测摘要（可选证据源，失败不阻断模拟交易）
+    kronos_enabled: bool = True
+    kronos_repo_path: str = "../Kronos"
+    kronos_tokenizer: str = "NeoQuasar/Kronos-Tokenizer-base"
+    kronos_model: str = "NeoQuasar/Kronos-small"
+    kronos_lookback: int = 120
+    kronos_pred_len: int = 10
+    kronos_sample_count: int = 1
+
     # 通知
     wechat_webhook: Optional[str] = None
     feishu_webhook: Optional[str] = None
@@ -47,11 +61,6 @@ class Settings(BaseSettings):
     max_position_ratio: float = 0.3
     max_daily_loss: float = 0.05
     max_drawdown: float = 0.1
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-
 
 def load_yaml_config(config_path: Path) -> dict:
     """加载 YAML 配置文件"""

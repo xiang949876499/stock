@@ -6,7 +6,7 @@ from typing import Optional
 
 from src.analysis.service import AnalysisService
 from src.web.deps import get_analysis_service
-from src.exceptions import AIProviderError, ValidationError
+from src.exceptions import AIProviderError
 from src.infra.logger import get_logger
 
 logger = get_logger("analysis_api")
@@ -19,6 +19,11 @@ class AnalysisRequest(BaseModel):
     symbol: str = Field(..., min_length=1, max_length=10, description="股票代码")
     market: str = Field("A", pattern="^(A|HK|US)$", description="市场类型")
     strategy: str = Field("comprehensive", description="分析策略")
+    analysis_date: Optional[str] = Field(
+        None,
+        pattern=r"^\d{4}-\d{2}-\d{2}$",
+        description="分析日期，格式 YYYY-MM-DD；TradingAgents 会使用该日期作为交易日",
+    )
 
 
 class AnalysisResponse(BaseModel):
@@ -37,7 +42,14 @@ async def analyze_stock(
 ):
     """分析股票"""
     try:
-        result = await service.analyze_stock(request.symbol, request.strategy)
+        result = await service.analyze_stock(
+            request.symbol,
+            request.strategy,
+            context={
+                "market": request.market,
+                "analysis_date": request.analysis_date,
+            },
+        )
 
         return AnalysisResponse(
             symbol=request.symbol,
@@ -65,8 +77,17 @@ async def list_reports(
 @router.get("/strategies")
 async def list_strategies():
     """获取策略列表"""
+    from src.analysis.tradingagents_adapter import TRADINGAGENTS_STRATEGY_NAMES
     from src.analysis.strategies.base import STRATEGIES
-    return [
+    strategies = [
         {"name": name, "description": strategy.__class__.__name__}
         for name, strategy in STRATEGIES.items()
     ]
+    strategies.append(
+        {
+            "name": "tradingagents",
+            "description": "TauricResearch TradingAgents 多智能体分析",
+            "aliases": sorted(TRADINGAGENTS_STRATEGY_NAMES - {"tradingagents"}),
+        }
+    )
+    return strategies

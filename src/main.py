@@ -13,9 +13,10 @@ import click
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.config import Settings, get_settings
-from src.infra.logger import setup_logger, get_logger
+from src.infra.logger import setup_logger
 from src.infra.scheduler import TaskScheduler
 from src.trading.scheduler import TradingScheduler
 from src.web.api.router import router as api_router
@@ -135,7 +136,38 @@ async def root():
 @app.get("/health")
 async def health():
     """健康检查"""
-    return {"status": "healthy"}
+    checks = {
+        "database": "unknown",
+        "scheduler": _scheduler_state(scheduler),
+        "trading_scheduler": _scheduler_state(trading_scheduler),
+        "trading_engine": "unknown",
+    }
+
+    try:
+        from src.web.api import trading as trading_api
+
+        engine = trading_api.get_engine()
+        engine.db.execute("SELECT 1").fetchone()
+        checks["database"] = "healthy"
+        checks["trading_engine"] = "running" if engine.is_running() else "stopped"
+    except Exception as exc:
+        checks["database"] = f"unhealthy: {exc}"
+
+    unhealthy = str(checks["database"]).startswith("unhealthy")
+    status = "degraded" if unhealthy or "stopped" in checks.values() else "healthy"
+    return JSONResponse(
+        status_code=503 if unhealthy else 200,
+        content={"status": status, "checks": checks},
+    )
+
+
+def _scheduler_state(wrapper) -> str:
+    if wrapper is None:
+        return "not_started"
+    try:
+        return "running" if wrapper.scheduler.running else "stopped"
+    except Exception as exc:
+        return f"error: {exc}"
 
 
 @click.group()
@@ -250,7 +282,7 @@ def recommend(market: str, top: int, analyze: bool):
                         f"{stock['score']:<8.1f} {analysis.score:<8.1f} "
                         f"{analysis.signal:<8} {analysis.trend:<8}"
                     )
-                except Exception as e:
+                except Exception:
                     click.echo(
                         f"{i:<4} {stock['symbol']:<10} {stock['name']:<10} "
                         f"{stock['score']:<8.1f} {'N/A':<8} {'N/A':<8} {'N/A':<8}"
@@ -302,7 +334,7 @@ def evaluate(symbol: str, market: str, strategy: str):
             click.echo(f"信号: {result.signal}")
             click.echo(f"趋势: {result.trend}")
             click.echo(f"{'='*50}")
-            click.echo(f"分析理由:")
+            click.echo("分析理由:")
             click.echo(result.reason)
             click.echo(f"{'='*50}")
 

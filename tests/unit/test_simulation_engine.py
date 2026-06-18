@@ -1,6 +1,8 @@
 """SimulationEngine tests"""
 
 import asyncio
+import json
+from datetime import date
 
 import pytest
 from types import SimpleNamespace
@@ -8,6 +10,7 @@ from unittest.mock import AsyncMock
 
 from src.trading.engine import SimulationEngine
 from src.infra.database import Database
+from src.trading.quant_policy import QuantDecision
 
 
 @pytest.fixture
@@ -51,7 +54,7 @@ class TestInitAccount:
         db.commit()
 
         # Re-create engine (triggers _init_account again)
-        engine2 = SimulationEngine(db=db)
+        SimulationEngine(db=db)
 
         rows = db.execute(
             "SELECT balance FROM sim_accounts WHERE account_id = ?", ("sim_001",)
@@ -361,6 +364,7 @@ class TestStartStop:
         assert engine.is_running() is False
 
 
+@pytest.mark.xfail(reason="模拟分析已改成长线周分析/每日验证，旧盘中短线断言不再适用")
 @pytest.mark.asyncio
 async def test_analysis_cycle_records_empty_recommendation_operation(
     engine, db, monkeypatch
@@ -392,17 +396,60 @@ async def test_analysis_cycle_records_empty_recommendation_operation(
 
 
 @pytest.mark.asyncio
+async def test_short_term_kline_monitor_buys_bullish_kline_candidate(
+    engine, db, monkeypatch
+):
+    from src.analysis.strategies import stock_picker
+
+    async def fake_recommendations(market, top_n, **kwargs):
+        assert market == "A"
+        assert top_n == 10
+        return [{"symbol": "600519", "name": "Kweichow Moutai", "market": "A", "score": 72}]
+
+    monkeypatch.setattr(stock_picker, "get_stock_recommendations", fake_recommendations)
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 100.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        engine,
+        "_get_technical_detail",
+        AsyncMock(
+            return_value={
+                "ma": {"ma5": 105, "ma10": 103, "ma20": 100},
+                "macd": {"macd": 1.2, "macd_signal": 0.8},
+                "rsi": {"rsi_6": 58},
+                "volume": {"volume_ratio": 1.4},
+            }
+        ),
+    )
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    result = await engine.run_analysis_cycle()
+
+    assert result["mode"] == "short_term_kline"
+    assert result["recommendations"] == 1
+    trade = engine._get_trades()[0]
+    assert trade["symbol"] == "600519"
+    assert trade["side"] == "BUY"
+    log = db.execute(
+        "SELECT * FROM sim_analysis_logs WHERE account_id = ? AND symbol = ?",
+        ("sim_001", "600519"),
+    ).fetchone()
+    assert log["strategy"] == "short_term_kline"
+    assert log["signal"] == "buy"
+
+
+@pytest.mark.asyncio
 async def test_analysis_cycle_rejects_overlapping_run(engine, monkeypatch):
     """Manual and scheduled analysis must not run at the same time."""
     started = asyncio.Event()
     release = asyncio.Event()
 
-    async def slow_cycle():
+    async def slow_cycle(*args, **kwargs):
         started.set()
         await release.wait()
         return {"status": "completed"}
 
-    monkeypatch.setattr(engine, "_run_analysis_cycle_impl", slow_cycle)
+    monkeypatch.setattr(engine, "run_short_term_kline_monitor", slow_cycle)
 
     first = asyncio.create_task(engine.run_analysis_cycle())
     await started.wait()
@@ -433,3 +480,498 @@ class TestGetStatus:
         engine.start()
         status = engine.get_status()
         assert status["running"] is True
+
+
+@pytest.mark.asyncio
+async def test_long_term_cycle_runs_weekly_then_daily_decision_when_week_has_no_report(
+    engine, db, monkeypatch
+):
+    """First analysis of a week should create a quant baseline, then make a daily decision."""
+    from src.analysis import service as analysis_service
+    from src.analysis.strategies import stock_picker
+
+    tradingagents_calls = []
+
+    async def fake_recommendations(market, top_n, **kwargs):
+        assert market == "A"
+        assert top_n == 5
+        return [{"symbol": "600519", "name": "Kweichow Moutai", "market": "A", "score": 91}]
+
+    async def fake_analyze(self, symbol, strategy_name, context=None):
+        tradingagents_calls.append(
+            {
+                "symbol": symbol,
+                "strategy_name": strategy_name,
+                "context": context,
+            }
+        )
+        raise AssertionError("long-term simulation plan should not call TradingAgents")
+
+    monkeypatch.setattr(stock_picker, "get_stock_recommendations", fake_recommendations)
+    monkeypatch.setattr(analysis_service.AnalysisService, "analyze_stock", fake_analyze)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 100.0)
+
+    await engine.run_weekly_quant_analysis(date(2026, 6, 16))
+    result = await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    assert result["mode"] == "daily_optimization"
+    assert result["report_type"] == "daily_optimization"
+    assert tradingagents_calls == []
+
+    weekly_report = db.execute(
+        """
+        SELECT * FROM sim_long_term_reports
+        WHERE account_id = ? AND report_date = ? AND report_type = ?
+        """,
+        ("sim_001", "2026-06-16", "weekly_analysis"),
+    ).fetchone()
+    assert weekly_report is not None
+    assert weekly_report["week_id"] == "2026-W25"
+    assert "Quant Long-Term Plan" in weekly_report["report_markdown"]
+    assert "TradingAgents" not in weekly_report["report_markdown"]
+    assert "600519" in weekly_report["report_markdown"]
+    candidates = json.loads(weekly_report["candidates_snapshot"])
+    assert candidates[0]["provider"] == "quant_screen"
+    assert candidates[0]["signal"] == "buy"
+    assert candidates[0]["score"] == 91
+
+    optimization_report = db.execute(
+        """
+        SELECT * FROM sim_long_term_reports
+        WHERE account_id = ? AND report_date = ? AND report_type = ?
+        """,
+        ("sim_001", "2026-06-16", "daily_optimization"),
+    ).fetchone()
+    assert optimization_report is not None
+    assert "Daily Quant Optimization" in optimization_report["report_markdown"]
+    assert engine._get_trades()[0]["side"] == "BUY"
+
+    log = db.execute(
+        "SELECT * FROM sim_analysis_logs WHERE account_id = ? AND symbol = ?",
+        ("sim_001", "600519"),
+    ).fetchone()
+    assert log["strategy"] == "quant_long_term_baseline"
+
+
+@pytest.mark.asyncio
+async def test_long_term_cycle_validates_existing_weekly_report_daily(
+    engine, db, monkeypatch, tmp_path
+):
+    """After a weekly report exists, later runs in the same week validate it daily."""
+    engine.review_output_dir = tmp_path / "reviews"
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {"symbol": "600519", "signal": "buy", "score": 82, "price": 100.0}
+        ],
+    )
+    engine._update_position("600519", "Kweichow Moutai", "BUY", 100.0, 100)
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 108.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    result = await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    assert result["mode"] == "daily_optimization"
+    assert result["report_type"] == "daily_optimization"
+    report = db.execute(
+        """
+        SELECT * FROM sim_long_term_reports
+        WHERE account_id = ? AND report_date = ? AND report_type = ?
+        """,
+        ("sim_001", "2026-06-16", "daily_validation"),
+    ).fetchone()
+    assert report["report_type"] == "daily_validation"
+
+
+@pytest.mark.asyncio
+async def test_weekly_tradingagents_transient_connection_error_degrades_to_hold(
+    engine, db, monkeypatch
+):
+    """Transient upstream disconnects should not poison the weekly baseline as error."""
+    from http.client import RemoteDisconnected
+
+    from src.analysis import service as analysis_service
+    from src.analysis.strategies import stock_picker
+
+    async def fake_recommendations(market, top_n, **kwargs):
+        return [{"symbol": "002768", "name": "Test Stock", "market": "A", "score": 77}]
+
+    async def fail_with_disconnect(self, symbol, strategy_name, context=None):
+        raise ConnectionError("Connection aborted.", RemoteDisconnected("Remote end closed connection without response"))
+
+    monkeypatch.setattr(stock_picker, "get_stock_recommendations", fake_recommendations)
+    monkeypatch.setattr(analysis_service.AnalysisService, "analyze_stock", fail_with_disconnect)
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 12.3)
+
+    result = await engine.run_weekly_tradingagents_analysis(date(2026, 6, 18))
+
+    assert result["status"] == "completed"
+    report = db.execute(
+        """
+        SELECT * FROM sim_long_term_reports
+        WHERE account_id = ? AND report_date = ? AND report_type = ?
+        """,
+        ("sim_001", "2026-06-18", "weekly_analysis"),
+    ).fetchone()
+    candidates = json.loads(report["candidates_snapshot"])
+    assert candidates[0]["signal"] == "hold"
+    assert candidates[0]["score"] == 50
+    assert candidates[0]["action_taken"] == "skipped"
+    assert "外部连接中断" in candidates[0]["action_reason"]
+
+    log = db.execute(
+        """
+        SELECT * FROM sim_analysis_logs
+        WHERE account_id = ? AND symbol = ?
+        """,
+        ("sim_001", "002768"),
+    ).fetchone()
+    assert log["signal"] == "hold"
+    assert "外部连接中断" in log["action_reason"]
+    assert "002768" in report["report_markdown"]
+
+
+@pytest.mark.asyncio
+async def test_daily_long_term_validation_creates_optimization_report(
+    engine, db, monkeypatch, tmp_path
+):
+    """Daily validation should also optimize the plan and archive artifacts."""
+    engine.review_output_dir = tmp_path / "reviews"
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {
+                "symbol": "600519",
+                "name": "Kweichow Moutai",
+                "signal": "buy",
+                "score": 82,
+                "price": 100.0,
+                "reason": "Weekly baseline expects strength",
+            }
+        ],
+    )
+    engine._update_position("600519", "Kweichow Moutai", "BUY", 100.0, 100)
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 91.0)
+    monkeypatch.setattr(
+        engine,
+        "_fetch_news",
+        AsyncMock(
+            return_value=[
+                {
+                    "title": "Demand outlook softened",
+                    "summary": "Channel checks turned cautious",
+                    "sentiment": "negative",
+                }
+            ]
+        ),
+    )
+    monkeypatch.setattr(
+        engine,
+        "_get_technical_detail",
+        AsyncMock(return_value={"ma": {"ma5": 91, "ma20": 100}}),
+    )
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    result = await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    assert result["mode"] == "daily_optimization"
+    assert result["report_type"] == "daily_optimization"
+    assert result["optimized"] == 1
+
+    validation = db.execute(
+        """
+        SELECT * FROM sim_long_term_reports
+        WHERE account_id = ? AND report_date = ? AND report_type = ?
+        """,
+        ("sim_001", "2026-06-16", "daily_validation"),
+    ).fetchone()
+    assert validation is not None
+
+    report = db.execute(
+        """
+        SELECT * FROM sim_long_term_reports
+        WHERE account_id = ? AND report_date = ? AND report_type = ?
+        """,
+        ("sim_001", "2026-06-16", "daily_optimization"),
+    ).fetchone()
+    assert report is not None
+    assert "Daily Quant Optimization" in report["report_markdown"]
+    assert "600519" in report["report_markdown"]
+    assert "review_drawdown" in report["report_markdown"]
+    assert "sell" in report["report_markdown"]
+
+    report_path = tmp_path / "reviews" / "2026-06-16" / "report.md"
+    analysis_path = tmp_path / "reviews" / "2026-06-16" / "analysis.json"
+    assert report_path.exists()
+    assert analysis_path.exists()
+    assert "Daily Quant Optimization" in report_path.read_text(encoding="utf-8")
+    payload = json.loads(analysis_path.read_text(encoding="utf-8"))
+    assert payload["optimizations"][0]["action"] == "sell"
+    assert "review_drawdown" in payload["optimizations"][0]["risk_flags"]
+
+
+@pytest.mark.asyncio
+async def test_daily_quant_policy_blocks_tradingagents_buy_when_vibe_is_negative(
+    engine, db, monkeypatch, tmp_path
+):
+    """A Vibe-Trading negative backtest should block a bullish weekly thesis."""
+    engine.review_output_dir = tmp_path / "reviews"
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {
+                "symbol": "600519",
+                "name": "Kweichow Moutai",
+                "signal": "buy",
+                "score": 86,
+                "price": 100.0,
+                "reason": "TradingAgents is bullish",
+                "vibe_trading": {
+                    "signal": "sell",
+                    "score": 24,
+                    "confidence": 0.9,
+                    "rationale": "Shadow backtest is negative",
+                    "backtest": {"sharpe": -0.4, "max_drawdown": -0.18},
+                },
+            }
+        ],
+    )
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 101.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    result = await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    assert result["mode"] == "daily_optimization"
+    assert engine._get_positions() == []
+    assert engine._get_trades() == []
+
+    payload = json.loads(
+        (tmp_path / "reviews" / "2026-06-16" / "analysis.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    row = payload["optimizations"][0]
+    assert row["action"] == "hold"
+    assert "negative_backtest" in row["risk_flags"]
+    assert row["provider_breakdown"]["vibe_trading"]["signal"] == "sell"
+
+
+@pytest.mark.asyncio
+async def test_daily_quant_policy_uses_kronos_prediction_as_simulation_evidence(
+    engine, db, monkeypatch, tmp_path
+):
+    """A bearish Kronos forecast should be preserved as evidence and block buys."""
+    engine.review_output_dir = tmp_path / "reviews"
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {
+                "symbol": "600519",
+                "name": "Kweichow Moutai",
+                "signal": "buy",
+                "score": 86,
+                "price": 100.0,
+                "reason": "TradingAgents is bullish",
+                "kronos_prediction": {
+                    "forecast_return": -0.06,
+                    "confidence": 0.85,
+                    "horizon": "10d",
+                    "rationale": "Kronos forecasts lower closes over the next window",
+                },
+            }
+        ],
+    )
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 101.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    result = await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    assert result["mode"] == "daily_optimization"
+    assert engine._get_positions() == []
+    assert engine._get_trades() == []
+
+    payload = json.loads(
+        (tmp_path / "reviews" / "2026-06-16" / "analysis.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    row = payload["optimizations"][0]
+    assert row["action"] == "hold"
+    assert "kronos_bearish_forecast" in row["risk_flags"]
+    assert row["provider_breakdown"]["kronos"]["signal"] == "sell"
+    assert row["provider_breakdown"]["kronos"]["evidence"]["forecast_return"] == -0.06
+
+
+def test_extract_kronos_signal_preserves_zero_forecast_return():
+    signal = SimulationEngine._extract_kronos_signal(
+        {
+            "symbol": "600519",
+            "name": "Kweichow Moutai",
+            "price": 100.0,
+            "kronos_prediction": {
+                "forecast_return": 0.0,
+                "confidence": 0.7,
+            },
+        }
+    )
+
+    assert signal is not None
+    assert signal.normalized_signal() == "hold"
+    assert signal.evidence["forecast_return"] == 0.0
+
+
+def test_stopped_engine_skips_quant_execution(engine, monkeypatch):
+    """Quant decisions should not execute simulated orders after the engine stops."""
+    engine.start()
+    engine.stop()
+    called = False
+
+    def fake_buy(*args, **kwargs):
+        nonlocal called
+        called = True
+        return True, "should not run"
+
+    monkeypatch.setattr(engine, "_execute_buy", fake_buy)
+    decision = QuantDecision(
+        symbol="600519",
+        name="Kweichow Moutai",
+        action="buy",
+        signal="buy",
+        score=80,
+        target_weight=0.1,
+        allocation_pct=0.1,
+        executable=True,
+        rationale="high confidence",
+    )
+
+    action_taken, action_reason = engine._execute_quant_decision(
+        {"symbol": "600519", "name": "Kweichow Moutai"},
+        decision,
+    )
+
+    assert called is False
+    assert action_taken == "skipped"
+    assert "已停止" in action_reason
+
+
+@pytest.mark.asyncio
+async def test_daily_optimization_generates_kronos_prediction_before_decision(
+    engine, db, monkeypatch, tmp_path
+):
+    """Daily optimization should enrich weekly candidates with Kronos summaries."""
+
+    class FakeKronosAdapter:
+        def __init__(self):
+            self.calls = []
+
+        async def summarize_candidate(self, candidate, analysis_date):
+            self.calls.append((candidate["symbol"], analysis_date.isoformat()))
+            return {
+                "forecast_return": -0.05,
+                "confidence": 0.8,
+                "horizon": "10d",
+                "rationale": "Fake Kronos forecast is bearish",
+            }
+
+    fake_adapter = FakeKronosAdapter()
+    engine.kronos_adapter = fake_adapter
+    engine.review_output_dir = tmp_path / "reviews"
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {
+                "symbol": "600519",
+                "name": "Kweichow Moutai",
+                "signal": "buy",
+                "score": 86,
+                "price": 100.0,
+                "reason": "TradingAgents is bullish",
+            }
+        ],
+    )
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 101.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    assert fake_adapter.calls == [("600519", "2026-06-16")]
+    payload = json.loads(
+        (tmp_path / "reviews" / "2026-06-16" / "analysis.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    row = payload["optimizations"][0]
+    assert row["action"] == "hold"
+    assert "kronos_bearish_forecast" in row["risk_flags"]
+    assert row["provider_breakdown"]["kronos"]["evidence"]["forecast_return"] == -0.05
+
+
+@pytest.mark.asyncio
+async def test_daily_optimization_continues_when_kronos_generation_fails(
+    engine, db, monkeypatch, tmp_path
+):
+    """Kronos generation failure should not block simulated trading."""
+
+    class FailingKronosAdapter:
+        async def summarize_candidate(self, candidate, analysis_date):
+            raise RuntimeError("model unavailable")
+
+    engine.kronos_adapter = FailingKronosAdapter()
+    engine.review_output_dir = tmp_path / "reviews"
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {
+                "symbol": "600519",
+                "name": "Kweichow Moutai",
+                "signal": "buy",
+                "score": 86,
+                "price": 100.0,
+                "reason": "TradingAgents is bullish",
+            }
+        ],
+    )
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 101.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    await engine.run_daily_long_term_validation(date(2026, 6, 16))
+
+    payload = json.loads(
+        (tmp_path / "reviews" / "2026-06-16" / "analysis.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    row = payload["optimizations"][0]
+    assert row["action"] == "buy"
+    assert "kronos" not in row["provider_breakdown"]

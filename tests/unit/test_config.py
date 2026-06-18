@@ -24,6 +24,20 @@ def test_settings_from_env(monkeypatch):
     assert settings.debug is True
 
 
+def test_settings_ignores_unrelated_env_file_keys(tmp_path):
+    """配置文件中和本应用无关的键不应阻塞启动。"""
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "APP_NAME=Test App\n"
+        "FRED_API_KEY=unused-by-stock-hub\n",
+        encoding="utf-8",
+    )
+
+    settings = Settings(_env_file=env_file)
+
+    assert settings.app_name == "Test App"
+
+
 def test_load_yaml_config(tmp_path):
     """测试加载 YAML 配置"""
     config_file = tmp_path / "config.yaml"

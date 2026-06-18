@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, Input, Typography, Alert, Descriptions, Tag, Table, Spin, Empty, Button, Space, message } from 'antd';
-import { DownloadOutlined, FileTextOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { FileTextOutlined, FileExcelOutlined } from '@ant-design/icons';
 import PluginSelector from '../components/PluginSelector';
 import ParameterForm from '../components/ParameterForm';
 import SlashCommand from '../components/SlashCommand';

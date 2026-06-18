@@ -16,13 +16,22 @@ class Database:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def connect(self):
         """连接数据库"""
         with self._lock:
-            self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+            if self.conn:
+                return
+            self.conn = sqlite3.connect(
+                str(self.db_path),
+                check_same_thread=False,
+                timeout=30,
+            )
             self.conn.row_factory = sqlite3.Row
+            self.conn.execute("PRAGMA busy_timeout = 5000")
+            self.conn.execute("PRAGMA foreign_keys = ON")
+            self.conn.execute("PRAGMA journal_mode = WAL")
             logger.info(f"连接数据库: {self.db_path}")
 
     def disconnect(self):
@@ -30,6 +39,7 @@ class Database:
         with self._lock:
             if self.conn:
                 self.conn.close()
+                self.conn = None
                 logger.info("断开数据库")
 
     def execute(self, sql: str, params: tuple = ()) -> sqlite3.Cursor:
@@ -180,6 +190,23 @@ class Database:
                 action_reason TEXT,
                 rule_checks TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        self.execute("""
+            CREATE TABLE IF NOT EXISTS sim_long_term_reports (
+                report_id TEXT PRIMARY KEY,
+                account_id TEXT NOT NULL,
+                report_date TEXT NOT NULL,
+                report_type TEXT NOT NULL,
+                week_id TEXT,
+                source_report_id TEXT,
+                positions_snapshot TEXT,
+                candidates_snapshot TEXT,
+                report_markdown TEXT,
+                metadata TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(account_id, report_date, report_type)
             )
         """)
 

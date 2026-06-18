@@ -2,7 +2,6 @@
 
 from typing import Optional
 from src.analysis.ai.base import AIModelAdapter, AnalysisResult
-from src.analysis.strategies.base import AnalysisStrategy, STRATEGIES
 from src.analysis.agent.stock_agent import StockAgent
 from src.infra.logger import get_logger
 
@@ -32,6 +31,19 @@ class AnalysisService:
             strategy_name: 策略名称
             context: 额外上下文（如 recent_news）
         """
+        from src.analysis.tradingagents_adapter import TRADINGAGENTS_STRATEGY_NAMES
+
+        context = context or {}
+        if strategy_name in TRADINGAGENTS_STRATEGY_NAMES:
+            from src.analysis import tradingagents_adapter
+
+            adapter = tradingagents_adapter.TradingAgentsAdapter()
+            return await adapter.analyze_stock(
+                symbol,
+                market=context.get("market", "A"),
+                analysis_date=context.get("analysis_date"),
+            )
+
         return await self.stock_agent.analyze_with_strategy(symbol, strategy_name, context)
 
     async def chat(

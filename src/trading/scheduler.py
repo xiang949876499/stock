@@ -3,8 +3,11 @@
 基于 APScheduler 的定时任务调度器，负责盘中分析、报告生成和策略调整。
 """
 
+from datetime import datetime
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 from pytz import timezone as tz
 
 from src.infra.logger import get_logger
@@ -18,10 +21,8 @@ class TradingScheduler:
     """模拟交易调度器
 
     管理以下定时任务:
-    - 盘中分析: 周一至周五 9-11点、13-14点，每 10 分钟执行一次
-    - 午间报告: 周一至周五 11:35
-    - 收盘报告: 周一至周五 15:30
-    - 策略调整: 周一至周五 16:00
+    - 长线周计划: 工作日 09:00 使用量化逻辑生成/刷新计划
+    - 每日验证: 周一至周五 15:35 验证并优化周度长线结论
     """
 
     def __init__(self):
@@ -36,52 +37,49 @@ class TradingScheduler:
         """
         self.engine = engine
 
-        # 盘中分析: 周一至周五，上午 9-11 点、下午 13-14 点，每 10 分钟
+        # Short-term K-line monitor during A-share morning session.
         self.scheduler.add_job(
             self._run_analysis_cycle,
             CronTrigger(
                 day_of_week="mon-fri",
-                hour="9-11,13-14",
-                minute="*/10",
+                hour="9-11",
+                minute="*/5",
             ),
-            id="analysis_cycle",
-            name="盘中分析",
+            id="short_term_kline_monitor_morning",
+            name="Short-term K-line monitor morning",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=120,
         )
 
-        # 午间报告: 周一至周五 11:35
+        # Short-term K-line monitor during A-share afternoon session.
         self.scheduler.add_job(
-            self._generate_half_day_summary,
+            self._run_analysis_cycle,
             CronTrigger(
                 day_of_week="mon-fri",
-                hour=11,
-                minute=35,
+                hour="13-14",
+                minute="*/5",
             ),
-            id="half_day_summary",
-            name="午间报告",
+            id="short_term_kline_monitor_afternoon",
+            name="Short-term K-line monitor afternoon",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=120,
         )
 
-        # 收盘报告: 周一至周五 15:30
+        # Post-market review: validate the plan after close and archive optimization.
         self.scheduler.add_job(
-            self._generate_daily_report,
+            self._run_daily_long_term_validation,
             CronTrigger(
                 day_of_week="mon-fri",
                 hour=15,
-                minute=30,
+                minute=35,
             ),
-            id="daily_report",
-            name="收盘报告",
-        )
-
-        # 策略调整: 周一至周五 16:00
-        self.scheduler.add_job(
-            self._adjust_strategy,
-            CronTrigger(
-                day_of_week="mon-fri",
-                hour=16,
-                minute=0,
-            ),
-            id="strategy_adjust",
-            name="策略调整",
+            id="post_market_trading_review",
+            name="Post-market quant trading review",
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=300,
         )
 
         logger.info("调度器任务配置完成")
@@ -89,27 +87,63 @@ class TradingScheduler:
     def start(self):
         """启动调度器"""
         self.scheduler.start()
+        self.scheduler.add_job(
+            self._run_analysis_cycle,
+            DateTrigger(run_date=datetime.now(CST)),
+            id="startup_trading_analysis",
+            name="Startup quant trading analysis",
+            replace_existing=True,
+            misfire_grace_time=300,
+            max_instances=1,
+            coalesce=True,
+        )
         logger.info("调度器启动")
 
     def stop(self):
         """停止调度器"""
-        self.scheduler.shutdown()
+        self.scheduler.shutdown(wait=False)
         logger.info("调度器停止")
 
     # ── 任务方法 ────────────────────────────────────────────────────────
 
     async def _run_analysis_cycle(self):
-        """盘中分析周期"""
+        """手动兼容入口：按长线节奏运行分析周期。"""
         if not self.engine.is_running():
-            logger.debug("引擎未运行，跳过盘中分析")
+            logger.debug("引擎未运行，跳过长线分析")
             return
 
-        logger.info("开始盘中分析周期")
+        logger.info("开始量化长线分析周期")
         try:
             await self.engine.run_analysis_cycle()
         except Exception as e:
-            logger.error(f"盘中分析失败: {e}")
-        logger.info("盘中分析周期完成")
+            logger.error(f"量化长线分析失败: {e}")
+        logger.info("量化长线分析周期完成")
+
+    async def _run_weekly_tradingagents_analysis(self):
+        """周度 TradingAgents 长线分析。"""
+        if not self.engine.is_running():
+            logger.debug("引擎未运行，跳过长线周分析")
+            return
+
+        logger.info("开始 TradingAgents 长线周分析")
+        try:
+            await self.engine.run_weekly_tradingagents_analysis()
+        except Exception as e:
+            logger.error(f"TradingAgents 长线周分析失败: {e}")
+        logger.info("TradingAgents 长线周分析完成")
+
+    async def _run_daily_long_term_validation(self):
+        """每日验证量化周度长线结论。"""
+        if not self.engine.is_running():
+            logger.debug("引擎未运行，跳过长线每日验证")
+            return
+
+        logger.info("开始量化长线每日验证")
+        try:
+            await self.engine.run_daily_long_term_validation()
+        except Exception as e:
+            logger.error(f"量化长线每日验证失败: {e}")
+        logger.info("量化长线每日验证完成")
 
     async def _generate_half_day_summary(self):
         """午间报告"""

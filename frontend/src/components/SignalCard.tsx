@@ -1,7 +1,7 @@
 import { Card, Tag, Button, Space } from 'antd'
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons'
 import type { Signal } from '../types'
-import { getSignalColor, getSignalText, formatDateTime } from '../utils'
+import { formatDateTime } from '../utils'
 
 interface SignalCardProps {
   signal: Signal

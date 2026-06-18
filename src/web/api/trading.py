@@ -1,5 +1,6 @@
 """模拟交易 API"""
 
+import asyncio
 import re
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -17,6 +18,7 @@ router = APIRouter(prefix="/trading", tags=["trading"])
 
 _db: Optional[Database] = None
 _engine: Optional[SimulationEngine] = None
+_initial_analysis_task: Optional[asyncio.Task] = None
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _SQLITE_UTC_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$")
@@ -96,6 +98,7 @@ async def reset_account(
             ("DELETE FROM sim_positions WHERE account_id = ?", (account_id,)),
             ("DELETE FROM sim_trades WHERE account_id = ?", (account_id,)),
             ("DELETE FROM sim_daily_reports WHERE account_id = ?", (account_id,)),
+            ("DELETE FROM sim_long_term_reports WHERE account_id = ?", (account_id,)),
             ("DELETE FROM sim_analysis_logs WHERE account_id = ?", (account_id,)),
             (
                 "INSERT INTO sim_accounts (account_id, initial_capital, balance, frozen, total_assets) VALUES (?, ?, ?, ?, ?)",
@@ -179,6 +182,41 @@ async def get_report(date: str, engine: SimulationEngine = Depends(get_engine)):
         raise HTTPException(500, "获取报告失败")
 
 
+@router.get("/long-term-reports")
+async def get_long_term_reports(
+    type: Optional[str] = None,
+    date: Optional[str] = None,
+    engine: SimulationEngine = Depends(get_engine),
+):
+    """获取 TradingAgents 长线模拟报告列表。"""
+    try:
+        if date:
+            _validate_date(date)
+        rows = engine._get_long_term_reports(report_type=type, report_date=date)
+        return _serialize_timestamps(rows)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取长线报告列表失败: {e}")
+        raise HTTPException(500, "获取长线报告列表失败")
+
+
+@router.get("/long-term-reports/{date}")
+async def get_long_term_report(date: str, engine: SimulationEngine = Depends(get_engine)):
+    """获取指定日期的 TradingAgents 长线模拟报告。"""
+    _validate_date(date)
+    try:
+        rows = engine._get_long_term_reports(report_date=date)
+        if not rows:
+            raise HTTPException(404, f"未找到 {date} 的长线报告")
+        return _serialize_timestamps(rows)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取长线报告失败: {e}")
+        raise HTTPException(500, "获取长线报告失败")
+
+
 @router.get("/reports/{date}/mistakes")
 async def get_mistakes(date: str, engine: SimulationEngine = Depends(get_engine)):
     """获取指定日期的交易失误"""
@@ -230,12 +268,47 @@ async def get_analysis_logs(
 # ── 引擎控制 ────────────────────────────────────────────────────
 
 
+async def _run_initial_analysis_after_start(engine: SimulationEngine):
+    """Run the first analysis after trading starts without blocking the API response."""
+    if not engine.is_running():
+        return
+    try:
+        await engine.run_analysis_cycle()
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        logger.error(f"启动后首轮分析失败: {e}")
+
+
+def _clear_initial_analysis_task(task):
+    global _initial_analysis_task
+    if task is _initial_analysis_task:
+        _initial_analysis_task = None
+
+
+def _cancel_initial_analysis_task():
+    global _initial_analysis_task
+    task = _initial_analysis_task
+    if task and not task.done():
+        task.cancel()
+    _initial_analysis_task = None
+
+
+def _schedule_initial_analysis(engine: SimulationEngine):
+    global _initial_analysis_task
+    _cancel_initial_analysis_task()
+    task = asyncio.create_task(_run_initial_analysis_after_start(engine))
+    _initial_analysis_task = task
+    task.add_done_callback(_clear_initial_analysis_task)
+
+
 @router.post("/start")
 async def start_trading(engine: SimulationEngine = Depends(get_engine)):
     """启动交易"""
     try:
         engine.start()
-        return {"status": "running"}
+        _schedule_initial_analysis(engine)
+        return {"status": "running", "analysis": "scheduled"}
     except Exception as e:
         logger.error(f"启动交易失败: {e}")
         raise HTTPException(500, "启动交易失败")
@@ -258,6 +331,7 @@ async def run_analysis(engine: SimulationEngine = Depends(get_engine)):
 async def stop_trading(engine: SimulationEngine = Depends(get_engine)):
     """停止交易"""
     try:
+        _cancel_initial_analysis_task()
         engine.stop()
         return {"status": "stopped"}
     except Exception as e:

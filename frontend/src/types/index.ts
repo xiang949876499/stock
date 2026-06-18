@@ -87,6 +87,7 @@ export interface AnalysisRequest {
   symbol: string
   market: string
   strategy: string
+  analysis_date?: string
 }
 
 // 分析响应

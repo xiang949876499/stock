@@ -42,3 +42,25 @@ def test_create_account(db):
     assert row is not None
     assert row[1] == 1000000
     assert row[2] == 1000000
+
+
+def test_disconnect_allows_later_reconnect(tmp_path):
+    db = Database(str(tmp_path / "reconnect.db"))
+    db.connect()
+    db.disconnect()
+
+    cursor = db.execute("SELECT 1")
+
+    assert cursor.fetchone()[0] == 1
+    db.disconnect()
+
+
+def test_connect_enables_long_running_sqlite_pragmas(tmp_path):
+    db = Database(str(tmp_path / "pragmas.db"))
+    db.connect()
+
+    assert db.execute("PRAGMA busy_timeout").fetchone()[0] >= 5000
+    assert db.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    assert db.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
+
+    db.disconnect()

@@ -14,7 +14,14 @@ class TaskScheduler:
     """任务调度器"""
 
     def __init__(self):
-        self.scheduler = AsyncIOScheduler(timezone=CST)
+        self.scheduler = AsyncIOScheduler(
+            timezone=CST,
+            job_defaults={
+                "coalesce": True,
+                "max_instances": 1,
+                "misfire_grace_time": 300,
+            },
+        )
 
     def setup(self):
         """设置定时任务"""
@@ -48,7 +55,7 @@ class TaskScheduler:
 
     def stop(self):
         """停止调度器"""
-        self.scheduler.shutdown()
+        self.scheduler.shutdown(wait=False)
         logger.info("调度器停止")
 
     async def sync_daily_data(self):

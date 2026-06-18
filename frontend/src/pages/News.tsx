@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Table, Tag, Card, Row, Col, Statistic, Select, Space, Empty, Button, message } from 'antd'
+import { Table, Tag, Card, Row, Col, Statistic, Select, Space, Empty, Button } from 'antd'
 import { ReloadOutlined, StarFilled } from '@ant-design/icons'
 import { newsApi } from '../services/api'
 import type { NewsItem } from '../types'

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Card, Form, Input, Select, Button, Descriptions, Tag, message, Space } from 'antd'
+import { Card, Form, Input, Select, Button, Descriptions, Tag, message, Space, DatePicker } from 'antd'
 import { useSearchParams } from 'react-router-dom'
+import dayjs from 'dayjs'
 import { analysisApi } from '../services/api'
 import type { AnalysisResponse } from '../types'
 
@@ -18,17 +19,28 @@ const Analysis = () => {
     if (symbol) {
       form.setFieldsValue({ symbol })
       // 自动触发分析
-      handleAnalyze(symbol, form.getFieldValue('market') || 'A', form.getFieldValue('strategy') || 'comprehensive')
+      handleAnalyze(
+        symbol,
+        form.getFieldValue('market') || 'A',
+        form.getFieldValue('strategy') || 'comprehensive',
+        form.getFieldValue('analysis_date'),
+      )
     }
   }, [searchParams])
 
-  const handleAnalyze = async (symbol: string, market: string, strategy: string) => {
+  const toAnalysisDate = (value?: any) => {
+    if (!value) return undefined
+    return typeof value.format === 'function' ? value.format('YYYY-MM-DD') : value
+  }
+
+  const handleAnalyze = async (symbol: string, market: string, strategy: string, analysisDate?: any) => {
     setLoading(true)
     try {
       const response = await analysisApi.analyze({
         symbol,
         market,
         strategy,
+        analysis_date: toAnalysisDate(analysisDate),
       })
       setResult(response.data)
       message.success('分析完成')
@@ -40,7 +52,7 @@ const Analysis = () => {
   }
 
   const onFinish = async (values: any) => {
-    await handleAnalyze(values.symbol, values.market, values.strategy)
+    await handleAnalyze(values.symbol, values.market, values.strategy, values.analysis_date)
   }
 
   return (
@@ -52,7 +64,7 @@ const Analysis = () => {
           form={form}
           layout="inline"
           onFinish={onFinish}
-          initialValues={{ market: 'A', strategy: 'comprehensive' }}
+          initialValues={{ market: 'A', strategy: 'comprehensive', analysis_date: dayjs() }}
         >
           <Form.Item
             name="symbol"
@@ -70,7 +82,7 @@ const Analysis = () => {
           </Form.Item>
 
           <Form.Item name="strategy" label="策略">
-            <Select style={{ width: 150 }}>
+            <Select style={{ width: 220 }}>
               <Option value="comprehensive">综合分析</Option>
               <Option value="ma_cross">均线金叉</Option>
               <Option value="macd">MACD</Option>
@@ -80,7 +92,12 @@ const Analysis = () => {
               <Option value="macd_second_golden_cross">MACD二次金叉</Option>
               <Option value="tuige_shortline">退哥短线</Option>
               <Option value="swing_defensive">摆动防御</Option>
+              <Option value="tradingagents">TradingAgents 多智能体</Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item name="analysis_date" label="分析日期">
+            <DatePicker style={{ width: 140 }} />
           </Form.Item>
 
           <Form.Item>

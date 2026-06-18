@@ -13,7 +13,7 @@ interface SignalState {
   rejectSignal: (signalId: string, reason: string) => Promise<void>
 }
 
-export const useSignalStore = create<SignalState>((set, get) => ({
+export const useSignalStore = create<SignalState>((set) => ({
   signals: [],
   loading: false,
   error: null,

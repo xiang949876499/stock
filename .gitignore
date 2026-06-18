@@ -44,6 +44,7 @@ data/minute/
 data/financial/
 data/news/
 data/cache/
+data/simulation_reviews/
 logs/
 *.parquet
 *.sqlite

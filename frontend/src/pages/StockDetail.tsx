@@ -9,7 +9,7 @@ import {
   LineChartOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import { stockApi, analysisApi } from '../services/api'
+import { stockApi } from '../services/api'
 import StockChart from '../components/StockChart'
 
 interface StockData {
@@ -58,7 +58,13 @@ const StockDetail = () => {
     try {
       // 获取股票信息
       const stockRes = await stockApi.get(sym, 'A')
-      setStock(stockRes.data)
+      const stockData = stockRes.data as typeof stockRes.data & Partial<StockData>
+      setStock({
+        ...stockData,
+        price: stockData.price ?? 0,
+        change: stockData.change ?? 0,
+        changePercent: stockData.changePercent ?? 0,
+      })
 
       // 获取 K 线数据
       const klineRes = await stockApi.getKline(sym, 'A')

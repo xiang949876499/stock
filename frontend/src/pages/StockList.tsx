@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Table, Tag, Space, Button, Input, Select, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
-import { StarOutlined, StarFilled, SearchOutlined } from '@ant-design/icons'
+import { StarOutlined, StarFilled } from '@ant-design/icons'
 import { useStockStore } from '../stores/stock'
 
 const { Search } = Input
