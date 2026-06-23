@@ -23,9 +23,12 @@ def db(tmp_path):
 
 
 @pytest.fixture
-def engine(db):
+def engine(db, tmp_path):
     """Create a SimulationEngine instance."""
-    return SimulationEngine(db=db)
+    engine = SimulationEngine(db=db)
+    engine.review_output_dir = tmp_path / "reviews"
+    engine.thinking_output_dir = tmp_path / "thinking"
+    return engine
 
 
 # ── _init_account ──────────────────────────────────────────────────
@@ -562,6 +565,7 @@ async def test_long_term_cycle_validates_existing_weekly_report_daily(
 ):
     """After a weekly report exists, later runs in the same week validate it daily."""
     engine.review_output_dir = tmp_path / "reviews"
+    engine.thinking_output_dir = tmp_path / "thinking"
     engine._record_long_term_report(
         report_date="2026-06-15",
         report_type="weekly_analysis",
@@ -688,6 +692,7 @@ async def test_daily_long_term_validation_creates_optimization_report(
     assert result["mode"] == "daily_optimization"
     assert result["report_type"] == "daily_optimization"
     assert result["optimized"] == 1
+    assert result["thinking_artifacts"]["thinking_path"].endswith("thinking.md")
 
     validation = db.execute(
         """
@@ -719,6 +724,15 @@ async def test_daily_long_term_validation_creates_optimization_report(
     payload = json.loads(analysis_path.read_text(encoding="utf-8"))
     assert payload["optimizations"][0]["action"] == "sell"
     assert "review_drawdown" in payload["optimizations"][0]["risk_flags"]
+
+    thinking_path = tmp_path / "thinking" / "2026-06-16" / "thinking.md"
+    thinking_json_path = tmp_path / "thinking" / "2026-06-16" / "thinking.json"
+    assert thinking_path.exists()
+    assert thinking_json_path.exists()
+    thinking_payload = json.loads(thinking_json_path.read_text(encoding="utf-8"))
+    assert thinking_payload["report_date"] == "2026-06-16"
+    assert thinking_payload["entries"][0]["symbol"] == "600519"
+    assert thinking_payload["entries"][0]["operation_judgement"] == "correct"
 
 
 @pytest.mark.asyncio
@@ -821,6 +835,74 @@ async def test_daily_quant_policy_uses_kronos_prediction_as_simulation_evidence(
     assert "kronos_bearish_forecast" in row["risk_flags"]
     assert row["provider_breakdown"]["kronos"]["signal"] == "sell"
     assert row["provider_breakdown"]["kronos"]["evidence"]["forecast_return"] == -0.06
+
+
+
+@pytest.mark.asyncio
+async def test_daily_optimization_uses_prior_thinking_feedback(
+    engine, db, monkeypatch, tmp_path
+):
+    """Prior daily thinking should become a provider signal in later decisions."""
+    engine.review_output_dir = tmp_path / "reviews"
+    engine.thinking_output_dir = tmp_path / "thinking"
+    prior_dir = engine.thinking_output_dir / "2026-06-16"
+    prior_dir.mkdir(parents=True)
+    (prior_dir / "thinking.json").write_text(
+        json.dumps(
+            {
+                "report_date": "2026-06-16",
+                "entries": [
+                    {
+                        "symbol": "600519",
+                        "name": "Kweichow Moutai",
+                        "operation_judgement": "incorrect",
+                        "feedback_signal": "sell",
+                        "feedback_score": 32.0,
+                        "confidence": 0.82,
+                        "risk_flags": ["thinking_incorrect"],
+                        "rationale": "Buying into a negative same-day move was incorrect.",
+                        "evidence": {"change_pct": -0.06},
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    engine._record_long_term_report(
+        report_date="2026-06-15",
+        report_type="weekly_analysis",
+        week_id="2026-W25",
+        report_markdown="# Weekly TradingAgents",
+        candidates_snapshot=[
+            {
+                "symbol": "600519",
+                "name": "Kweichow Moutai",
+                "signal": "buy",
+                "score": 86,
+                "price": 100.0,
+                "reason": "TradingAgents is bullish",
+            }
+        ],
+    )
+    monkeypatch.setattr(engine, "_get_price", lambda symbol: 103.0)
+    monkeypatch.setattr(engine, "_fetch_news", AsyncMock(return_value=[]))
+    monkeypatch.setattr(engine, "_get_technical_detail", AsyncMock(return_value={}))
+    monkeypatch.setattr(engine, "_check_rules", AsyncMock(return_value=[]))
+
+    result = await engine.run_daily_long_term_validation(date(2026, 6, 17))
+
+    assert result["mode"] == "daily_optimization"
+    payload = json.loads(
+        (tmp_path / "reviews" / "2026-06-17" / "analysis.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    row = payload["optimizations"][0]
+    assert row["action"] == "hold"
+    assert "thinking" in row["provider_breakdown"]
+    assert row["provider_breakdown"]["thinking"]["signal"] == "sell"
+    assert "thinking_incorrect" in row["risk_flags"]
 
 
 def test_extract_kronos_signal_preserves_zero_forecast_return():

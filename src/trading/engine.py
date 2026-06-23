@@ -17,6 +17,11 @@ from src.trading.strategy_selector import StrategySelector
 from src.trading.mistake_analyzer import MistakeAnalyzer
 from src.trading.quant_policy import QuantLongTermPolicy, QuantDecision
 from src.trading.reasoning import ReasoningSignal
+from src.trading.thinking import (
+    build_thinking_review,
+    render_thinking_markdown,
+    thinking_entry_to_signal_payload,
+)
 
 logger = get_logger("simulation_engine")
 
@@ -37,6 +42,7 @@ class SimulationEngine:
         self.kronos_adapter = None
         self._kronos_adapter_initialized = False
         self.review_output_dir = Path("./data/simulation_reviews")
+        self.thinking_output_dir = Path("./data/simulation_thinking")
         self._rules_service = None
         self._analysis_lock = asyncio.Lock()
         self._init_account()
@@ -1224,6 +1230,11 @@ class SimulationEngine:
             optimization_markdown,
             artifact_payload,
         )
+        thinking_review = build_thinking_review(report_date, optimizations)
+        thinking_artifacts = self._save_thinking_artifacts(
+            report_date,
+            thinking_review,
+        )
         optimization_report_id = self._record_long_term_report(
             report_date=report_date,
             report_type="daily_optimization",
@@ -1236,6 +1247,7 @@ class SimulationEngine:
                 "source_weekly_report_id": weekly_report["report_id"],
                 "validation_report_id": validation_report_id,
                 "artifacts": artifacts,
+                "thinking_artifacts": thinking_artifacts,
             },
         )
         self._record_system_operation(
@@ -1251,6 +1263,7 @@ class SimulationEngine:
             "validated": len(validations),
             "optimized": len(optimizations),
             "artifacts": artifacts,
+            "thinking_artifacts": thinking_artifacts,
         }
 
     async def _build_daily_optimizations(
@@ -1301,6 +1314,13 @@ class SimulationEngine:
                 tech_detail=tech_detail,
                 rule_checks=rule_checks,
             )
+            thinking_signal = self._thinking_reasoning_signal(
+                symbol,
+                candidate.get("name", symbol),
+                report_date,
+            )
+            if thinking_signal:
+                reasoning_signals.append(thinking_signal)
             decision = self.long_term_policy.decide(
                 symbol=symbol,
                 name=candidate.get("name", symbol),
@@ -1361,6 +1381,63 @@ class SimulationEngine:
             )
 
         return optimizations
+
+
+    def _thinking_reasoning_signal(
+        self,
+        symbol: str,
+        name: str,
+        report_date: str,
+    ) -> ReasoningSignal | None:
+        entry = self._load_latest_thinking_entry(symbol, report_date)
+        if not entry:
+            return None
+        payload = thinking_entry_to_signal_payload(entry)
+        if not payload:
+            return None
+        return ReasoningSignal(
+            provider="thinking",
+            symbol=symbol,
+            name=name,
+            signal=str(payload.get("signal") or "hold"),
+            score=float(payload.get("score") or 50),
+            confidence=float(payload.get("confidence") or 0.5),
+            rationale=str(payload.get("rationale") or ""),
+            risks=list(payload.get("risks") or []),
+            evidence=dict(payload.get("evidence") or {}),
+            artifact_paths=list(payload.get("artifact_paths") or []),
+        )
+
+    def _load_latest_thinking_entry(
+        self,
+        symbol: str,
+        before_report_date: str,
+    ) -> dict | None:
+        try:
+            if not self.thinking_output_dir.exists():
+                return None
+            date_dirs = sorted(
+                (
+                    item
+                    for item in self.thinking_output_dir.iterdir()
+                    if item.is_dir() and item.name < before_report_date
+                ),
+                key=lambda item: item.name,
+                reverse=True,
+            )
+            for date_dir in date_dirs:
+                json_path = date_dir / "thinking.json"
+                if not json_path.exists():
+                    continue
+                payload = json.loads(json_path.read_text(encoding="utf-8"))
+                for entry in payload.get("entries", []):
+                    if str(entry.get("symbol") or "") == symbol:
+                        result = dict(entry)
+                        result["artifact_paths"] = [str(json_path)]
+                        return result
+        except Exception as exc:
+            logger.warning(f"Thinking feedback load failed: {symbol}, {exc}")
+        return None
 
     async def _enrich_candidates_with_kronos(
         self,
@@ -1811,6 +1888,24 @@ class SimulationEngine:
             return {"report_path": str(markdown_path), "analysis_path": str(json_path)}
         except Exception as exc:
             logger.error(f"Daily optimization artifact export failed: {exc}")
+            return {"error": str(exc)}
+
+
+    def _save_thinking_artifacts(
+        self,
+        report_date: str,
+        review: dict,
+    ) -> dict:
+        try:
+            output_dir = self.thinking_output_dir / report_date
+            output_dir.mkdir(parents=True, exist_ok=True)
+            markdown_path = output_dir / "thinking.md"
+            json_path = output_dir / "thinking.json"
+            markdown_path.write_text(render_thinking_markdown(review), encoding="utf-8")
+            json_path.write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding="utf-8")
+            return {"thinking_path": str(markdown_path), "thinking_json_path": str(json_path)}
+        except Exception as exc:
+            logger.error(f"Daily thinking artifact export failed: {exc}")
             return {"error": str(exc)}
 
     def _build_quant_weekly_long_term_report(
