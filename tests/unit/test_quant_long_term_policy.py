@@ -116,6 +116,42 @@ def test_policy_blocks_buy_when_kronos_forecast_is_bearish():
     assert decision.provider_breakdown["kronos"]["signal"] == "sell"
 
 
+def test_policy_blocks_buy_when_thinking_feedback_is_incorrect():
+    policy = QuantLongTermPolicy()
+    decision = policy.decide(
+        symbol="600519",
+        name="Kweichow Moutai",
+        current_price=103.0,
+        baseline_price=100.0,
+        position=None,
+        rule_checks=[],
+        signals=[
+            ReasoningSignal(
+                provider="tradingagents",
+                symbol="600519",
+                signal="buy",
+                score=88,
+                confidence=0.82,
+                rationale="TradingAgents is bullish",
+            ),
+            ReasoningSignal(
+                provider="thinking",
+                symbol="600519",
+                signal="sell",
+                score=32,
+                confidence=0.82,
+                rationale="Prior operation was judged incorrect.",
+                risks=["thinking_incorrect"],
+            ),
+        ],
+    )
+
+    assert decision.action == "hold"
+    assert decision.executable is False
+    assert "thinking_incorrect" in decision.risk_flags
+    assert decision.provider_breakdown["thinking"]["signal"] == "sell"
+
+
 def test_policy_sells_held_position_on_quant_risk_break():
     policy = QuantLongTermPolicy()
     decision = policy.decide(

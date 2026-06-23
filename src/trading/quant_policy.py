@@ -49,6 +49,7 @@ class QuantLongTermPolicy:
         "tradingagents_cn": 1.0,
         "vibe_trading": 1.2,
         "kronos": 1.1,
+        "thinking": 0.9,
         "technical": 0.8,
         "rules": 1.1,
     }
@@ -200,6 +201,8 @@ class QuantLongTermPolicy:
             "blocking_rules",
             "negative_backtest",
             "kronos_bearish_forecast",
+            "thinking_incorrect",
+            "thinking_questionable",
             "review_drawdown",
         }
         return any(flag in blockers for flag in risk_flags)
