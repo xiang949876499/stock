@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Stock Hub — explainable signals with simulation and risk gates</title>
+  <desc id="desc">A restrained dark decision system showing data becoming a structured signal, passing risk controls into simulated trading and review.</desc>
+  <rect width="1200" height="360" rx="28" fill="#0b0d0e"/>
+  <path d="M54 75H1146" stroke="#34393a" stroke-width="2"/>
+  <text x="58" y="64" fill="#8ee3a7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" letter-spacing="3">DECISION SYSTEM / RISK-GATED SIMULATION</text>
+  <text x="58" y="136" fill="#f4f1e9" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif" font-size="60" font-weight="700">Stock Hub</text>
+  <text x="61" y="179" fill="#cbd1cc" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif" font-size="26">把多源分析转成受风控约束、可复盘的模拟决策</text>
+  <text x="61" y="211" fill="#8e9892" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif" font-size="21">Turn data into risk-gated simulation.</text>
+  <text x="61" y="258" fill="#8ee3a7" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">DATA · REASONING SIGNALS · RISK · SIMULATION</text>
+  <g transform="translate(630 84)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <path d="M96 82H121M251 82H276M384 82H409" stroke="#70877a" stroke-width="4"/><polygon points="121,82 109,74 109,90" fill="#8ee3a7"/><polygon points="276,82 264,74 264,90" fill="#8ee3a7"/><polygon points="409,82 397,74 397,90" fill="#8ee3a7"/>
+    <rect x="0" y="10" width="96" height="144" rx="16" fill="#15191a" stroke="#525a55" stroke-width="2"/><text x="18" y="44" fill="#f4f1e9" font-size="16" font-weight="700">SOURCE</text><text x="15" y="73" fill="#aeb8b1" font-size="12">market data</text><text x="15" y="96" fill="#aeb8b1" font-size="12">models</text><text x="15" y="119" fill="#aeb8b1" font-size="12">rules</text>
+    <rect x="121" y="10" width="130" height="144" rx="16" fill="#172420" stroke="#8ee3a7" stroke-width="2"/><text x="147" y="44" fill="#e9ffe9" font-size="16" font-weight="700">SIGNAL</text><text x="139" y="73" fill="#a6d7b1" font-size="12">action + score</text><text x="139" y="96" fill="#a6d7b1" font-size="12">reason + risk</text><text x="139" y="119" fill="#a6d7b1" font-size="12">source trace</text>
+    <rect x="276" y="10" width="108" height="144" rx="16" fill="#25221b" stroke="#d6af66" stroke-width="2"/><text x="299" y="44" fill="#fff4d7" font-size="16" font-weight="700">RISK</text><text x="292" y="73" fill="#dbc08b" font-size="12">approval</text><text x="292" y="96" fill="#dbc08b" font-size="12">position</text><text x="292" y="119" fill="#dbc08b" font-size="12">market rules</text>
+    <rect x="409" y="10" width="124" height="144" rx="16" fill="#172124" stroke="#6fb7c3" stroke-width="2"/><text x="432" y="44" fill="#e9fbff" font-size="16" font-weight="700">SIMULATE</text><text x="427" y="73" fill="#acd3db" font-size="12">orders</text><text x="427" y="96" fill="#acd3db" font-size="12">positions</text><text x="427" y="119" fill="#acd3db" font-size="12">trade logs</text>
+    <path d="M470 168C417 236 197 236 180 154" fill="none" stroke="#8ee3a7" stroke-width="3" stroke-dasharray="7 8"/><polygon points="180,154 190,167 172,166" fill="#8ee3a7"/>
+    <text x="154" y="236" fill="#aeb8b1" font-size="14">review → next cycle</text>
+  </g>
+</svg>

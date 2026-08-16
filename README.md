@@ -1,93 +1,111 @@
 # Stock Hub
 
-量化交易一体化平台
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="Stock Hub AI 辅助量化决策平台：多源数据形成可解释信号，经风控门禁后进入模拟交易与复盘">
+</p>
 
-## 功能特性
+<p align="center">
+  <strong>AI 辅助量化决策与模拟交易平台</strong><br>
+  Standardize evidence into risk-gated signals, simulate execution, and review every cycle.
+</p>
 
-- 多数据源聚合（A股/港股）
-- 因子研究与模型训练（qlib）
-- 信号生成与执行（vnpy）
-- AI 分析报告
-- 消息推送（企微/飞书/Telegram）
-- Web 工作台
+## 这是什么 / What it is
 
-## 快速开始
+Stock Hub 面向量化研究与策略验证场景，连接行情、新闻、技术指标、量化策略、AI 分析与交易规则，并将它们归一为带依据和风险信息的信号。信号经过校验、审批和规则检查后进入模拟交易，结果再回流到复盘与优化流程。
 
-### 安装
+Stock Hub is designed for research, backtesting, and simulated execution. It is not investment advice and it does not promise returns.
 
-```bash
-# 克隆项目
-git clone https://github.com/your-username/stock-hub.git
-cd stock-hub
+## 核心能力 / What you can do
 
-# 创建虚拟环境
+- 管理数据连接、标的目录、同步与缓存。
+- 组合技术分析、量化策略、AI/Agent 分析、新闻和规则结果。
+- 将不同来源归一为结构化 ReasoningSignal，保留动作、评分、理由、风险与来源。
+- 管理信号创建、校验、审批、拒绝与发布状态。
+- 通过 Signal Bridge、Risk Manager 与中国市场交易规则控制订单计划。
+- 记录模拟账户、持仓、交易、报告、错误分析和 Thinking Review。
+- 通过 Web API、WebSocket 与前端工作台查看研究、信号、执行和复盘信息。
+
+## 工作流 / How it works
+
+1. 数据层接入行情、财务、新闻和标的目录。
+2. 分析层运行技术指标、量化策略、AI Agent 或可选插件。
+3. 系统归一生成 ReasoningSignal，并保留可解释依据。
+4. 信号通过校验、审批和发布状态后，进入执行桥和风险检查。
+5. 模拟网关记录订单、持仓和交易。
+6. 日报、周报、Mistake Analyzer 与 Thinking Review 将结果回流为优化建议。
+
+A model output cannot directly become an execution action. The state, rule, and risk layers are deliberate product controls.
+
+## 快速开始 / Quick start
+
+项目要求 Python 3.12 到 3.13。
+
+~~~powershell
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
-
-# 安装依赖
-pip install -r requirements.txt
+.\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-```
-
-### 配置
-
-```bash
-# 复制配置文件
-cp .env.example .env
-
-# 编辑配置
-vim .env
-```
-
-### 运行
-
-```bash
-# 初始化数据
 stock-hub init
+stock-hub serve --reload
+~~~
 
-# 启动服务
-stock-hub serve
+打开 API：
 
-# 运行测试
+- API: http://localhost:8080
+- Health: http://localhost:8080/health
+- API docs: http://localhost:8080/docs
+
+前端独立启动：
+
+~~~powershell
+cd frontend
+npm install
+npm run dev
+~~~
+
+## 可选集成 / Optional integrations
+
+核心安装用于平台与模拟研究流程。按需要安装额外集成：
+
+~~~powershell
+pip install -e ".[backtrader]"
+pip install -e ".[easytrader]"
+pip install -e ".[qbot]"
+pip install -e ".[ai-quant]"
+pip install -e ".[tradingagents]"
+pip install -e ".[kronos]"
+~~~
+
+这些集成是可选适配器，不意味着所有数据源、券商接口或模型已在每个环境中配置完成。请在真实使用前检查其依赖、许可、网络连接和风险控制。
+
+## 风险与使用边界 / Risk and use boundaries
+
+- 默认定位是研究、回测和模拟交易，不构成投资建议。
+- 不应将模型评分、新闻情绪或单一技术指标视为保证收益的依据。
+- 真实资金执行需要单独的权限、合规、风控和人工审核流程。
+- 回测与模拟应考虑数据可得时间、滑点、手续费、市场规则和样本外验证。
+
+## 验证 / Verify
+
+~~~powershell
 pytest
-```
-
-## 开发
-
-```bash
-# 安装开发依赖
-pip install -e ".[dev]"
-
-# 运行测试
-pytest
-
-# 代码格式化
 black src tests
-
-# 代码检查
 ruff check src tests
-```
+~~~
 
-## License
+## 项目结构 / Project map
+
+~~~text
+src/data/            数据连接、标的目录、同步与存储
+src/analysis/        策略、AI 适配、报告与研究能力
+src/research/        信号生成与研究模块
+src/execution/       信号桥、风险、规则与执行适配
+src/trading/         模拟交易、调度、复盘与优化
+src/trading_rules/   交易规则库与 API
+src/web/             FastAPI、WebSocket 与前端接口
+frontend/            React 工作台
+tests/               自动化测试
+~~~
+
+## 许可证 / License
 
 MIT
-
-## TradingAgents
-
-Optional multi-agent stock analysis is available through the `tradingagents` strategy. See `docs/tradingagents.md` for install, configuration, and API usage.
-
-Simulated trading can also use optional Kronos forecast summaries during the daily optimization step. Install the `kronos` extra and keep `../Kronos` available when enabling real model inference; see `docs/tradingagents.md` for the candidate snapshot format and runtime knobs.
-
-## Docker
-
-Build and run the API container:
-
-```bash
-docker build -t stock-hub:latest .
-docker compose up -d
-```
-
-The API is exposed on `http://localhost:8080`, and the frontend is exposed on `http://localhost:3000`.
-
-The compose file maps `./data` to `/app/data`, so daily simulation optimization reports are saved on the host under `data/simulation_reviews/YYYY-MM-DD/`.
