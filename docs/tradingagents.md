@@ -180,3 +180,7 @@ Runtime knobs:
 - If the optional dependency is missing, the backend returns an analysis provider error that includes the install command.
 - TradingAgents writes its own result/cache/memory files according to its upstream config, including `TRADINGAGENTS_RESULTS_DIR`, `TRADINGAGENTS_CACHE_DIR`, and `TRADINGAGENTS_MEMORY_LOG_PATH`.
 - TradingAgents, Vibe-Trading, and Kronos are evidence providers only. They do not bypass Stock Hub's quant policy, simulation executor, or risk checks.
+
+## License boundary
+
+TradingAgents is an optional third-party dependency. The repository root [LICENSE](../LICENSE) applies only to Stock Hub's original contributions and does not replace TradingAgents' Apache-2.0 terms or any required notices. See [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) before distributing an artifact that includes this dependency.

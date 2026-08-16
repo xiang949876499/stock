@@ -13,7 +13,7 @@ name = "stock-hub"
 version = "0.1.0"
 description = "量化交易一体化平台"
 readme = "README.md"
-license = "MIT"
+license = { text = "Learning and Non-Commercial Use License (LNCU); see LICENSE" }
 requires-python = ">=3.12,<3.14"
 authors = [
     { name = "Stock Hub Team" },

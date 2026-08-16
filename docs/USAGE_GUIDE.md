@@ -388,9 +388,11 @@ curl "http://localhost:8000/api/v1/news/sentiment?symbol=600519&market=A&days=30
 
 | 数据源 | 市场 | 说明 |
 |--------|------|------|
-| AkShare | A股/港股 | 免费，推荐 |
-| Tushare | A股 | 需要注册获取 Token |
+| AkShare | A股/港股 | 接入方便；商用前须核验 AKShare 及其上游数据源授权 |
+| Tushare | A股 | 需要注册获取 Token；个人/非商业权限不等于商业数据授权 |
 | YFinance | 港股/美股 | 免费 |
+
+> 数据源的许可证、服务条款和市场数据权利独立于本项目许可。商用部署、再分发或对外提供数据服务前，须分别取得相应权利；详见仓库根目录的[第三方声明](../THIRD_PARTY_NOTICES.md)。
 
 ### 同步数据
 
